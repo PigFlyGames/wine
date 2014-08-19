@@ -84,6 +84,7 @@ struct dxgi_factory
     UINT adapter_count;
     IWineDXGIAdapter **adapters;
     BOOL extended;
+    HWND window;
 };
 
 HRESULT dxgi_factory_create(REFIID riid, void **factory, BOOL extended) DECLSPEC_HIDDEN;
