@@ -224,10 +224,23 @@ HRESULT d3d10_buffer_init(struct d3d10_buffer *buffer, struct d3d10_device *devi
     buffer->ID3D10Buffer_iface.lpVtbl = &d3d10_buffer_vtbl;
     buffer->refcount = 1;
 
-    FIXME("Implement DXGI<->wined3d usage conversion\n");
-
     wined3d_desc.byte_width = desc->ByteWidth;
-    wined3d_desc.usage = desc->Usage;
+    switch (desc->Usage)
+    {
+        case D3D10_USAGE_DYNAMIC:
+            wined3d_desc.usage = WINED3DUSAGE_DYNAMIC | WINED3DUSAGE_WRITEONLY;
+            break;
+        case D3D10_USAGE_STAGING:
+            wined3d_desc.usage = WINED3DUSAGE_DYNAMIC;
+            break;
+        case D3D10_USAGE_IMMUTABLE:
+        case D3D10_USAGE_DEFAULT:
+            wined3d_desc.usage = 0;
+            break;
+        default:
+            WARN("Invalid usage parameter: %d\n", desc->Usage);
+            return WINED3DERR_INVALIDCALL;
+    }
     wined3d_desc.bind_flags = desc->BindFlags;
     wined3d_desc.cpu_access_flags = desc->CPUAccessFlags;
     wined3d_desc.misc_flags = desc->MiscFlags;
