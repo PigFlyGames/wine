@@ -161,16 +161,28 @@ static HRESULT STDMETHODCALLTYPE dxgi_factory_EnumAdapters(IWineDXGIFactory *ifa
 
 static HRESULT STDMETHODCALLTYPE dxgi_factory_MakeWindowAssociation(IWineDXGIFactory *iface, HWND window, UINT flags)
 {
+    struct dxgi_factory *factory = impl_from_IWineDXGIFactory(iface);
+
     FIXME("iface %p, window %p, flags %#x stub!\n", iface, window, flags);
 
-    return E_NOTIMPL;
+    if (!window && flags)
+        return DXGI_ERROR_INVALID_CALL;
+
+    factory->window = window;
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE dxgi_factory_GetWindowAssociation(IWineDXGIFactory *iface, HWND *window)
 {
+    struct dxgi_factory *factory = impl_from_IWineDXGIFactory(iface);
+
     FIXME("iface %p, window %p stub!\n", iface, window);
 
-    return E_NOTIMPL;
+    if (!window)
+        return DXGI_ERROR_INVALID_CALL;
+
+    *window = factory->window;
+    return S_OK;
 }
 
 static UINT dxgi_rational_to_uint(const DXGI_RATIONAL *rational)
