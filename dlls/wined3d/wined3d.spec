@@ -176,6 +176,7 @@
 @ cdecl wined3d_resource_get_priority(ptr)
 @ cdecl wined3d_resource_set_parent(ptr ptr)
 @ cdecl wined3d_resource_set_priority(ptr long)
+@ cdecl wined3d_resource_update(ptr ptr long ptr ptr long long)
 
 @ cdecl wined3d_rendertarget_view_create(ptr ptr ptr ptr ptr)
 @ cdecl wined3d_rendertarget_view_create_from_surface(ptr ptr ptr ptr)
