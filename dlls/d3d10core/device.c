@@ -598,8 +598,26 @@ static void STDMETHODCALLTYPE d3d10_device_UpdateSubresource(ID3D10Device1 *ifac
         ID3D10Resource *resource, UINT subresource_idx, const D3D10_BOX *box,
         const void *data, UINT row_pitch, UINT depth_pitch)
 {
-    FIXME("iface %p, resource %p, subresource_idx %u, box %p, data %p, row_pitch %u, depth_pitch %u stub!\n",
+    struct d3d10_device *device = impl_from_ID3D10Device(iface);
+    struct wined3d_resource* wined3d_resource;
+    struct wined3d_box wined3d_box;
+
+    TRACE("iface %p, resource %p, subresource_idx %u, box %p, data %p, row_pitch %u, depth_pitch %u stub!\n",
             iface, resource, subresource_idx, box, data, row_pitch, depth_pitch);
+
+    wined3d_resource = wined3d_resource_from_resource(resource);
+    if (box)
+    {
+        wined3d_box.left   = box->left;
+        wined3d_box.top    = box->top;
+        wined3d_box.front  = box->front;
+        wined3d_box.right  = box->right;
+        wined3d_box.bottom = box->bottom;
+        wined3d_box.back   = box->back;
+    }
+
+    wined3d_resource_update(device->wined3d_device, wined3d_resource, subresource_idx,
+        box ? &wined3d_box : NULL, data, row_pitch, depth_pitch);
 }
 
 static void STDMETHODCALLTYPE d3d10_device_ClearRenderTargetView(ID3D10Device1 *iface,
