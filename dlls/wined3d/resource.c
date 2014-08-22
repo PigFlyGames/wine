@@ -334,3 +334,30 @@ void wined3d_resource_update_draw_binding(struct wined3d_resource *resource)
     else
         resource->draw_binding = WINED3D_LOCATION_TEXTURE_RGB;
 }
+
+void CDECL wined3d_resource_update(struct wined3d_device *device, struct wined3d_resource *resource, UINT sub_resource_idx,
+        struct wined3d_box *box, const void *data, UINT row_pitch, UINT depth_pitch)
+{
+    struct wined3d_buffer *buffer;
+    BYTE *dest;
+
+    if (resource->type != WINED3D_RTYPE_BUFFER)
+    {
+        FIXME("Unsuported resource type: %d\n", resource->type);
+        return;
+    }
+
+    if (sub_resource_idx || box)
+    {
+        WARN("Subresource index and/or Box parameter is not supported for buffers\n");
+        return;
+    }
+
+    /* FIXME: should normally use the command stream here */
+    buffer = buffer_from_resource(resource);
+    if (SUCCEEDED(wined3d_buffer_map(buffer, 0, 0, &dest, 0)))
+    {
+        memcpy(dest, data, buffer->desc.byte_width); /* FIXME: is row_pitch and depth_pitch used? */
+        wined3d_buffer_unmap(buffer);
+    }
+}
