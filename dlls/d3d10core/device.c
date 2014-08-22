@@ -467,6 +467,26 @@ static void STDMETHODCALLTYPE d3d10_device_OMSetRenderTargets(ID3D10Device1 *ifa
     dsv = unsafe_impl_from_ID3D10DepthStencilView(depth_stencil_view);
     wined3d_device_set_depth_stencil_view(device->wined3d_device,
             dsv ? dsv->wined3d_view : NULL);
+
+    /*
+     * DirectX 10 enables the depth buffer depending on the depth_stencil_view value
+     * as long as no explicit depth buffer state was set using OMSetDepthStencilState
+     * to disable the depth buffer test.
+     * The default values are described at:
+     * http://msdn.microsoft.com/en-us/library/windows/desktop/bb205036(v=vs.85).aspx
+     */
+    if (!device->depth_stencil_state)
+    {
+        wined3d_mutex_lock();
+        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ZENABLE, dsv ? TRUE : FALSE);
+        wined3d_mutex_unlock();
+    }
+    else if (device->depth_stencil_state->desc.DepthEnable && !dsv)
+    {
+        wined3d_mutex_lock();
+        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ZENABLE, FALSE);
+        wined3d_mutex_unlock();
+    }
 }
 
 static void STDMETHODCALLTYPE d3d10_device_OMSetBlendState(ID3D10Device1 *iface,
@@ -486,12 +506,37 @@ static void STDMETHODCALLTYPE d3d10_device_OMSetDepthStencilState(ID3D10Device1 
         ID3D10DepthStencilState *depth_stencil_state, UINT stencil_ref)
 {
     struct d3d10_device *device = impl_from_ID3D10Device(iface);
+    D3D10_DEPTH_STENCIL_DESC *desc;
 
     TRACE("iface %p, depth_stencil_state %p, stencil_ref %u.\n",
-            iface, depth_stencil_state, stencil_ref);
+             iface, depth_stencil_state, stencil_ref);
 
     device->depth_stencil_state = unsafe_impl_from_ID3D10DepthStencilState(depth_stencil_state);
     device->stencil_ref = stencil_ref;
+
+    desc = &device->depth_stencil_state->desc;
+
+    wined3d_mutex_lock();
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ZENABLE, desc->DepthEnable);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ZWRITEENABLE, (desc->DepthWriteMask == D3D10_DEPTH_WRITE_MASK_ALL));
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ZFUNC, desc->DepthFunc); /* the enumeration is identical */
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILENABLE, desc->StencilEnable);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILMASK, desc->StencilReadMask);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILWRITEMASK, desc->StencilWriteMask);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILREF, device->stencil_ref);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_TWOSIDEDSTENCILMODE, 1);
+
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILFUNC, desc->FrontFace.StencilFunc);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILFAIL, desc->FrontFace.StencilFailOp);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILPASS, desc->FrontFace.StencilPassOp);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_STENCILZFAIL, desc->FrontFace.StencilDepthFailOp);
+
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_CCW_STENCILFUNC, desc->BackFace.StencilFunc);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_CCW_STENCILFAIL, desc->BackFace.StencilFailOp);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_CCW_STENCILPASS, desc->BackFace.StencilPassOp);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_CCW_STENCILZFAIL, desc->BackFace.StencilDepthFailOp);
+
+    wined3d_mutex_unlock();
 }
 
 static void STDMETHODCALLTYPE d3d10_device_SOSetTargets(ID3D10Device1 *iface,
@@ -664,8 +709,20 @@ static void STDMETHODCALLTYPE d3d10_device_ClearRenderTargetView(ID3D10Device1 *
 static void STDMETHODCALLTYPE d3d10_device_ClearDepthStencilView(ID3D10Device1 *iface,
         ID3D10DepthStencilView *depth_stencil_view, UINT flags, FLOAT depth, UINT8 stencil)
 {
-    FIXME("iface %p, depth_stencil_view %p, flags %#x, depth %f, stencil %u stub!\n",
+    struct d3d10_device *device = impl_from_ID3D10Device(iface);
+    struct d3d10_depthstencil_view *view = unsafe_impl_from_ID3D10DepthStencilView(depth_stencil_view);
+    int wined3d_flags = 0;
+
+    TRACE("iface %p, depth_stencil_view %p, flags %#x, depth %f, stencil %u stub!\n",
             iface, depth_stencil_view, flags, depth, stencil);
+
+    if (!depth_stencil_view)
+        return;
+
+    if (flags & D3D10_CLEAR_DEPTH) wined3d_flags = WINED3DCLEAR_ZBUFFER;
+    if (flags & D3D10_CLEAR_STENCIL) wined3d_flags |= WINED3DCLEAR_STENCIL;
+
+    wined3d_device_clear_depthstencil_view(device->wined3d_device, view->wined3d_view, wined3d_flags, depth, stencil);
 }
 
 static void STDMETHODCALLTYPE d3d10_device_GenerateMips(ID3D10Device1 *iface,

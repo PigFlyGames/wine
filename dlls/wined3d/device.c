@@ -3738,6 +3738,16 @@ void CDECL wined3d_device_copy_resource(struct wined3d_device *device,
     }
 }
 
+void CDECL wined3d_device_clear_depthstencil_view(struct wined3d_device *device,
+        struct wined3d_rendertarget_view *view, int flags, float depth, DWORD stencil)
+{
+    struct wined3d_fb_state fb = {NULL, view};
+    const RECT draw_rect = {0, 0, view->width, view->height};
+
+    device_clear_render_targets(device, 0, &fb, 0, NULL, &draw_rect, flags, 0, depth, stencil);
+}
+
+
 HRESULT CDECL wined3d_device_clear_rendertarget_view(struct wined3d_device *device,
         struct wined3d_rendertarget_view *view, const RECT *rect, const struct wined3d_color *color)
 {

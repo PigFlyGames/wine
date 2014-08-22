@@ -2095,6 +2095,8 @@ HRESULT __cdecl wined3d_device_begin_scene(struct wined3d_device *device);
 HRESULT __cdecl wined3d_device_begin_stateblock(struct wined3d_device *device);
 HRESULT __cdecl wined3d_device_clear(struct wined3d_device *device, DWORD rect_count, const RECT *rects, DWORD flags,
         const struct wined3d_color *color, float z, DWORD stencil);
+void CDECL wined3d_device_clear_depthstencil_view(struct wined3d_device *device,
+        struct wined3d_rendertarget_view *view, int flags, float depth, DWORD stencil);
 HRESULT __cdecl wined3d_device_clear_rendertarget_view(struct wined3d_device *device,
         struct wined3d_rendertarget_view *view, const RECT *rect, const struct wined3d_color *color);
 void __cdecl wined3d_device_copy_resource(struct wined3d_device *device,
