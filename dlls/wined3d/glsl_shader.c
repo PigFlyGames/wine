@@ -6674,6 +6674,7 @@ static const SHADER_HANDLER shader_glsl_instruction_handler_table[WINED3DSIH_TAB
     /* WINED3DSIH_DCL_VERTICES_OUT      */ shader_glsl_nop,
     /* WINED3DSIH_DCL_INPUT             */ shader_glsl_nop,
     /* WINED3DSIH_DCL_INPUT_PS          */ shader_glsl_nop,
+    /* WINED3DSIH_DCL_OUTPUT            */ shader_glsl_nop,
     /* WINED3DSIH_DEF                   */ shader_glsl_nop,
     /* WINED3DSIH_DEFB                  */ shader_glsl_nop,
     /* WINED3DSIH_DEFI                  */ shader_glsl_nop,
