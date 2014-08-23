@@ -124,6 +124,7 @@ enum wined3d_sm4_opcode
     WINED3D_SM4_OP_DCL_OUTPUT_TOPOLOGY  = 0x5c,
     WINED3D_SM4_OP_DCL_INPUT_PRIMITIVE  = 0x5d,
     WINED3D_SM4_OP_DCL_VERTICES_OUT     = 0x5e,
+    WINED3D_SM4_OP_DCL_INPUT            = 0x5f,
 };
 
 enum wined3d_sm4_register_type
@@ -261,6 +262,7 @@ static const struct wined3d_sm4_opcode_info opcode_table[] =
     {WINED3D_SM4_OP_DCL_OUTPUT_TOPOLOGY,    WINED3DSIH_DCL_OUTPUT_TOPOLOGY, "",     ""},
     {WINED3D_SM4_OP_DCL_INPUT_PRIMITIVE,    WINED3DSIH_DCL_INPUT_PRIMITIVE, "",     ""},
     {WINED3D_SM4_OP_DCL_VERTICES_OUT,       WINED3DSIH_DCL_VERTICES_OUT,    "",     ""},
+    {WINED3D_SM4_OP_DCL_INPUT,              WINED3DSIH_DCL_INPUT,           "U",     "UU"},
 };
 
 static const enum wined3d_shader_register_type register_type_table[] =
@@ -773,6 +775,18 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
     else if (opcode == WINED3D_SM4_OP_DCL_VERTICES_OUT)
     {
         ins->declaration.count = *p++;
+    }
+    else if (opcode == WINED3D_SM4_OP_DCL_INPUT)
+    {
+
+
+
+        for (i = 0; i < ins->dst_count; ++i)
+        {
+            shader_sm4_read_dst_param(priv, &p, map_data_type(opcode_info->dst_info[i]), &priv->dst_param[i]);
+        }
+
+        ins->src_count = 0;
     }
     else
     {
