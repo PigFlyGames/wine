@@ -62,6 +62,7 @@ static const char * const shader_opcode_names[] =
     /* WINED3DSIH_DCL_INPUT_PS          */ "dcl_input_ps",
     /* WINED3DSIH_DCL_OUTPUT            */ "dcl_output",
     /* WINED3DSIH_DCL_OUTPUT_SIV        */ "dcl_output_siv",
+    /* WINED3DSIH_DCL_TEMPS             */ "dcl_temps",
     /* WINED3DSIH_DEF                   */ "def",
     /* WINED3DSIH_DEFB                  */ "defb",
     /* WINED3DSIH_DEFI                  */ "defi",
@@ -636,6 +637,10 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, const st
 
             reg_maps->output_registers |= 1 << ins.dst[0].reg.idx[0].offset;
             shader_signature_from_semantic(&output_signature[ins.dst[0].reg.idx[0].offset], &ins.declaration.semantic);
+        }
+        else if (ins.handler_idx == WINED3DSIH_DCL_TEMPS)
+        {
+            reg_maps->temporary++;
         }
         else if (ins.handler_idx == WINED3DSIH_DEF)
         {
@@ -1557,6 +1562,10 @@ static void shader_trace_init(const struct wined3d_shader_frontend *fe, void *fe
                 break;
             }
 
+        }
+        else if (ins.handler_idx == WINED3DSIH_DCL_TEMPS)
+        {
+            TRACE("%s %d", shader_opcode_names[ins.handler_idx], ins.numTempRegisters);
         }
         else if (ins.handler_idx == WINED3DSIH_DEF)
         {
