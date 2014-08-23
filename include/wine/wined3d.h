@@ -76,6 +76,22 @@ enum wined3d_light_type
     WINED3D_LIGHT_GLSPOT                    = 5, /* D3D7 */
 };
 
+
+enum wined3d_system_value_name_type
+{
+    WINED3D_SVNT_UNDEFINED                      = 0,
+    WINED3D_SVNT_POSITION                       = 1,
+    WINED3D_SVNT_CLIP_DISTANCE                  = 2,
+    WINED3D_SVNT_CULL_DISTANCE                  = 3,
+    WINED3D_SVNT_RENDER_TARGET_ARRAY_INDEX      = 4,
+    WINED3D_SVNT_VIEWPORT_ARRAY_INDEX           = 5,
+    WINED3D_SVNT_VERTEX_ID                      = 6,
+    WINED3D_SVNT_PRIMITIVE_ID                   = 7,
+    WINED3D_SVNT_INSTANCE_ID                    = 8,
+    WINED3D_SVNT_IS_FRONT_FACE                  = 9,
+    WINED3D_SVNT_SAMPLE_INDEX                   = 10,
+};
+
 enum wined3d_interpolation_mode_type
 {
     WINED3D_IMT_NONE                        = 0,

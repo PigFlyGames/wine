@@ -445,6 +445,7 @@ enum WINED3D_SHADER_INSTRUCTION_HANDLER
     WINED3DSIH_DCL_INPUT,
     WINED3DSIH_DCL_INPUT_PS,
     WINED3DSIH_DCL_OUTPUT,
+    WINED3DSIH_DCL_OUTPUT_SIV,
     WINED3DSIH_DEF,
     WINED3DSIH_DEFB,
     WINED3DSIH_DEFI,
@@ -686,6 +687,7 @@ struct wined3d_shader_instruction
     } declaration;
 
     enum wined3d_interpolation_mode_type interpolation_mode_type;
+    enum wined3d_system_value_name_type system_value_name_type;
 };
 
 
@@ -694,6 +696,22 @@ enum wined3d_sm4_input_interpolation_mode_type
     WINED3D_SM4_INPUT_IMT_NONE       = 0x0,
     WINED3D_SM4_INPUT_IMT_LINEAR     = 0x1,
 };
+
+enum wined3d_sm4_output_system_value_name_type
+{
+    WINED3D_SM4_OUTPUT_SVNT_UNDEFINED                      = 0x0,
+    WINED3D_SM4_OUTPUT_SVNT_POSITION                       = 0x1,
+    WINED3D_SM4_OUTPUT_SVNT_CLIP_DISTANCE                  = 0x2,
+    WINED3D_SM4_OUTPUT_SVNT_CULL_DISTANCE                  = 0x3,
+    WINED3D_SM4_OUTPUT_SVNT_RENDER_TARGET_ARRAY_INDEX      = 0x4,
+    WINED3D_SM4_OUTPUT_SVNT_VIEWPORT_ARRAY_INDEX           = 0x5,
+    WINED3D_SM4_OUTPUT_SVNT_VERTEX_ID                      = 0x6,
+    WINED3D_SM4_OUTPUT_SVNT_PRIMITIVE_ID                   = 0x7,
+    WINED3D_SM4_OUTPUT_SVNT_INSTANCE_ID                    = 0x8,
+    WINED3D_SM4_OUTPUT_SVNT_IS_FRONT_FACE                  = 0x9,
+    WINED3D_SM4_OUTPUT_SVNT_SAMPLE_INDEX                   = 0xA,
+};
+
 
 struct wined3d_shader_attribute
 {
