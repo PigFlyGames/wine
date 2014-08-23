@@ -446,6 +446,7 @@ enum WINED3D_SHADER_INSTRUCTION_HANDLER
     WINED3DSIH_DCL_INPUT_PS,
     WINED3DSIH_DCL_OUTPUT,
     WINED3DSIH_DCL_OUTPUT_SIV,
+    WINED3DSIH_DCL_TEMPS,
     WINED3DSIH_DEF,
     WINED3DSIH_DEFB,
     WINED3DSIH_DEFI,
@@ -688,6 +689,7 @@ struct wined3d_shader_instruction
 
     enum wined3d_interpolation_mode_type interpolation_mode_type;
     enum wined3d_system_value_name_type system_value_name_type;
+    int numTempRegisters;
 };
 
 
