@@ -42,6 +42,8 @@ WINE_DECLARE_DEBUG_CHANNEL(d3d_bytecode);
 
 #define WINED3D_SM4_REGISTER_MODIFIER           (1 << 31)
 
+#define WINED3D_SM4_SYS_VAL_NAME_TYPE_SHIFT     26
+
 #define WINED3D_SM4_ADDRESSING_SHIFT1           25
 #define WINED3D_SM4_ADDRESSING_MASK1            (0x3 << WINED3D_SM4_ADDRESSING_SHIFT1)
 
@@ -130,6 +132,7 @@ enum wined3d_sm4_opcode
     WINED3D_SM4_OP_DCL_INPUT            = 0x5f,
     WINED3D_SM4_OP_DCL_INPUT_PS         = 0x62,
     WINED3D_SM4_OP_DCL_OUTPUT           = 0x65,
+    WINED3D_SM4_OP_DCL_OUTPUT_SIV       = 0x67,
 };
 
 enum wined3d_sm4_register_type
@@ -270,6 +273,7 @@ static const struct wined3d_sm4_opcode_info opcode_table[] =
     {WINED3D_SM4_OP_DCL_INPUT,              WINED3DSIH_DCL_INPUT,           "U",     "UU"},
     {WINED3D_SM4_OP_DCL_INPUT_PS,           WINED3DSIH_DCL_INPUT_PS,        "U",     "UU"},
     {WINED3D_SM4_OP_DCL_OUTPUT,             WINED3DSIH_DCL_OUTPUT,          "U",     "UU"},
+    {WINED3D_SM4_OP_DCL_OUTPUT_SIV,         WINED3DSIH_DCL_OUTPUT_SIV,      "U",     "UU"},
 };
 
 static const enum wined3d_shader_register_type register_type_table[] =
@@ -294,6 +298,13 @@ static const enum wined3d_interpolation_mode_type input_interpolation_mode_type_
 {
     /* WINED3D_SM4_INPUT_IMT_NONE */            WINED3D_IMT_NONE,
     /* WINED3D_SM4_INPUT_IMT_LINEAR */          WINED3D_IMT_LINEAR,
+};
+
+
+static const enum wined3d_system_value_name_type output_system_value_name_type_table[] =
+{
+    /* WINED3D_SM4_OUTPUT_SVNT_UNDEFINED */          WINED3D_SVNT_UNDEFINED,
+    /* WINED3D_SM4_OUTPUT_SVNT_POSITION  */          WINED3D_SVNT_POSITION,
 };
 
 static const enum wined3d_primitive_type output_primitive_type_table[] =
@@ -817,6 +828,20 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
     }
     else if (opcode == WINED3D_SM4_OP_DCL_OUTPUT)
     {
+        for (i = 0; i < ins->dst_count; ++i)
+        {
+            shader_sm4_read_dst_param(priv, &p, map_data_type(opcode_info->dst_info[i]), &priv->dst_param[i]);
+        }
+
+        ins->src_count = 0;
+    }
+    else if (opcode == WINED3D_SM4_OP_DCL_OUTPUT_SIV)
+    {
+        enum wined3d_sm4_output_system_value_name_type system_value_name_type;
+
+        system_value_name_type = opcode_token >> WINED3D_SM4_SYS_VAL_NAME_TYPE_SHIFT;
+        ins->system_value_name_type = output_system_value_name_type_table[system_value_name_type];
+
         for (i = 0; i < ins->dst_count; ++i)
         {
             shader_sm4_read_dst_param(priv, &p, map_data_type(opcode_info->dst_info[i]), &priv->dst_param[i]);
