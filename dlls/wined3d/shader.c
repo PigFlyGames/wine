@@ -60,6 +60,7 @@ static const char * const shader_opcode_names[] =
     /* WINED3DSIH_DCL_VERTICES_OUT      */ "dcl_maxOutputVertexCount",
     /* WINED3DSIH_DCL_INPUT             */ "dcl_input",
     /* WINED3DSIH_DCL_INPUT_PS          */ "dcl_input_ps",
+    /* WINED3DSIH_DCL_OUTPUT            */ "dcl_output",
     /* WINED3DSIH_DEF                   */ "def",
     /* WINED3DSIH_DEFB                  */ "defb",
     /* WINED3DSIH_DEFI                  */ "defi",
@@ -614,6 +615,16 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, const st
 
             reg_maps->input_registers |= 1 << ins.dst[0].reg.idx[0].offset;
             shader_signature_from_semantic(&input_signature[ins.dst[0].reg.idx[0].offset], &ins.declaration.semantic);
+        }
+        else if (ins.handler_idx == WINED3DSIH_DCL_OUTPUT)
+        {
+            ins.declaration.semantic.usage = shader->u.vs.attributes[ins.dst[0].reg.idx[0].offset].usage;
+            ins.declaration.semantic.usage_idx = 0;
+            ins.declaration.semantic.reg.reg.idx[0].offset = ins.dst[0].reg.idx[0].offset;
+            ins.declaration.semantic.reg.write_mask = 15;
+
+            reg_maps->output_registers |= 1 << ins.dst[0].reg.idx[0].offset;
+            shader_signature_from_semantic(&output_signature[ins.dst[0].reg.idx[0].offset], &ins.declaration.semantic);
         }
         else if (ins.handler_idx == WINED3DSIH_DEF)
         {
@@ -1474,6 +1485,18 @@ static void shader_trace_init(const struct wined3d_shader_frontend *fe, void *fe
                 shader_dump_dst_param(&ins.dst[i], &shader_version);
             }
 
+        }
+        else if (ins.handler_idx == WINED3DSIH_DCL_OUTPUT)
+        {
+
+            TRACE("%s", shader_opcode_names[ins.handler_idx]);
+
+            for (i = 0; i < ins.dst_count; ++i)
+            {
+                shader_dump_ins_modifiers(&ins.dst[i]);
+                TRACE(!i ? " " : ", ");
+                shader_dump_dst_param(&ins.dst[i], &shader_version);
+            }
         }
         else if (ins.handler_idx == WINED3DSIH_DEF)
         {
