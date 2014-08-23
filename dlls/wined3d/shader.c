@@ -61,6 +61,7 @@ static const char * const shader_opcode_names[] =
     /* WINED3DSIH_DCL_INPUT             */ "dcl_input",
     /* WINED3DSIH_DCL_INPUT_PS          */ "dcl_input_ps",
     /* WINED3DSIH_DCL_OUTPUT            */ "dcl_output",
+    /* WINED3DSIH_DCL_OUTPUT_SIV        */ "dcl_output_siv",
     /* WINED3DSIH_DEF                   */ "def",
     /* WINED3DSIH_DEFB                  */ "defb",
     /* WINED3DSIH_DEFI                  */ "defi",
@@ -617,6 +618,16 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, const st
             shader_signature_from_semantic(&input_signature[ins.dst[0].reg.idx[0].offset], &ins.declaration.semantic);
         }
         else if (ins.handler_idx == WINED3DSIH_DCL_OUTPUT)
+        {
+            ins.declaration.semantic.usage = shader->u.vs.attributes[ins.dst[0].reg.idx[0].offset].usage;
+            ins.declaration.semantic.usage_idx = 0;
+            ins.declaration.semantic.reg.reg.idx[0].offset = ins.dst[0].reg.idx[0].offset;
+            ins.declaration.semantic.reg.write_mask = 15;
+
+            reg_maps->output_registers |= 1 << ins.dst[0].reg.idx[0].offset;
+            shader_signature_from_semantic(&output_signature[ins.dst[0].reg.idx[0].offset], &ins.declaration.semantic);
+        }
+        else if (ins.handler_idx == WINED3DSIH_DCL_OUTPUT_SIV)
         {
             ins.declaration.semantic.usage = shader->u.vs.attributes[ins.dst[0].reg.idx[0].offset].usage;
             ins.declaration.semantic.usage_idx = 0;
@@ -1497,6 +1508,55 @@ static void shader_trace_init(const struct wined3d_shader_frontend *fe, void *fe
                 TRACE(!i ? " " : ", ");
                 shader_dump_dst_param(&ins.dst[i], &shader_version);
             }
+        }
+        else if (ins.handler_idx == WINED3DSIH_DCL_OUTPUT_SIV)
+        {
+
+            TRACE("%s", shader_opcode_names[ins.handler_idx]);
+
+            for (i = 0; i < ins.dst_count; ++i)
+            {
+                shader_dump_ins_modifiers(&ins.dst[i]);
+                TRACE(!i ? " " : ", ");
+                shader_dump_dst_param(&ins.dst[i], &shader_version);
+            }
+
+            switch(ins.system_value_name_type)
+            {
+              case WINED3D_SM4_OUTPUT_SVNT_POSITION:
+                TRACE(", Position");
+                break;
+              case WINED3D_SM4_OUTPUT_SVNT_CLIP_DISTANCE:
+                TRACE(", ClipDistance");
+                break;
+              case WINED3D_SM4_OUTPUT_SVNT_CULL_DISTANCE:
+                TRACE(", CullDistance");
+                break;
+              case WINED3D_SM4_OUTPUT_SVNT_RENDER_TARGET_ARRAY_INDEX:
+                TRACE(", RenderTargetArrayIndex");
+                break;
+              case WINED3D_SM4_OUTPUT_SVNT_VIEWPORT_ARRAY_INDEX:
+                TRACE(", ViewportArrayIndex");
+                break;
+              case WINED3D_SM4_OUTPUT_SVNT_VERTEX_ID:
+                TRACE(", VertexId");
+                break;
+              case WINED3D_SM4_OUTPUT_SVNT_PRIMITIVE_ID:
+                TRACE(", PrimitiveId");
+                break;
+              case WINED3D_SM4_OUTPUT_SVNT_INSTANCE_ID:
+                TRACE(", InstanceId");
+                break;
+              case WINED3D_SM4_OUTPUT_SVNT_IS_FRONT_FACE:
+                TRACE(", IsFrontFace");
+                break;
+              case WINED3D_SM4_OUTPUT_SVNT_SAMPLE_INDEX:
+                TRACE(", SampleIndex");
+                break;
+              default:
+                break;
+            }
+
         }
         else if (ins.handler_idx == WINED3DSIH_DEF)
         {
