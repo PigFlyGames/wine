@@ -76,6 +76,12 @@ enum wined3d_light_type
     WINED3D_LIGHT_GLSPOT                    = 5, /* D3D7 */
 };
 
+enum wined3d_interpolation_mode_type
+{
+    WINED3D_IMT_NONE                        = 0,
+    WINED3D_IMT_LINEAR                      = 1,
+};
+
 enum wined3d_primitive_type
 {
     WINED3D_PT_UNDEFINED                    = 0,
