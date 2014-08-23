@@ -42,6 +42,8 @@ WINE_DECLARE_DEBUG_CHANNEL(d3d_bytecode);
 
 #define WINED3D_SM4_REGISTER_MODIFIER           (1 << 31)
 
+#define WINED3D_SM4_TEMPS_SHIFT                 24
+
 #define WINED3D_SM4_SYS_VAL_NAME_TYPE_SHIFT     26
 
 #define WINED3D_SM4_ADDRESSING_SHIFT1           25
@@ -133,6 +135,7 @@ enum wined3d_sm4_opcode
     WINED3D_SM4_OP_DCL_INPUT_PS         = 0x62,
     WINED3D_SM4_OP_DCL_OUTPUT           = 0x65,
     WINED3D_SM4_OP_DCL_OUTPUT_SIV       = 0x67,
+    WINED3D_SM4_OP_DCL_TEMPS            = 0x68,
 };
 
 enum wined3d_sm4_register_type
@@ -274,6 +277,7 @@ static const struct wined3d_sm4_opcode_info opcode_table[] =
     {WINED3D_SM4_OP_DCL_INPUT_PS,           WINED3DSIH_DCL_INPUT_PS,        "U",     "UU"},
     {WINED3D_SM4_OP_DCL_OUTPUT,             WINED3DSIH_DCL_OUTPUT,          "U",     "UU"},
     {WINED3D_SM4_OP_DCL_OUTPUT_SIV,         WINED3DSIH_DCL_OUTPUT_SIV,      "U",     "UU"},
+    {WINED3D_SM4_OP_DCL_TEMPS,              WINED3DSIH_DCL_TEMPS,           "U",     "UU"},
 };
 
 static const enum wined3d_shader_register_type register_type_table[] =
@@ -848,6 +852,11 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
         }
 
         ins->src_count = 0;
+    }
+    else if (opcode == WINED3D_SM4_OP_DCL_TEMPS)
+    {
+        int numTempRegisters = opcode_token >> WINED3D_SM4_TEMPS_SHIFT;
+        ins->numTempRegisters = numTempRegisters;
     }
     else
     {
