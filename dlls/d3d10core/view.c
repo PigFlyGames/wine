@@ -847,11 +847,6 @@ struct d3d10_rendertarget_view *unsafe_impl_from_ID3D10RenderTargetView(ID3D10Re
     return impl_from_ID3D10RenderTargetView(iface);
 }
 
-static inline struct d3d10_shader_resource_view *impl_from_ID3D10ShaderResourceView(ID3D10ShaderResourceView *iface)
-{
-    return CONTAINING_RECORD(iface, struct d3d10_shader_resource_view, ID3D10ShaderResourceView_iface);
-}
-
 /* IUnknown methods */
 
 static HRESULT STDMETHODCALLTYPE d3d10_shader_resource_view_QueryInterface(ID3D10ShaderResourceView *iface,

@@ -137,6 +137,7 @@
 @ cdecl wined3d_device_set_stream_source(ptr long ptr long long)
 @ cdecl wined3d_device_set_stream_source_freq(ptr long long)
 @ cdecl wined3d_device_set_texture(ptr long ptr)
+@ cdecl wined3d_device_set_texture_from_resource(ptr long ptr)
 @ cdecl wined3d_device_set_texture_stage_state(ptr long long long)
 @ cdecl wined3d_device_set_transform(ptr long ptr)
 @ cdecl wined3d_device_set_vertex_declaration(ptr ptr)
