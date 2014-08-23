@@ -29,6 +29,9 @@ WINE_DECLARE_DEBUG_CHANNEL(d3d_bytecode);
 #define WINED3D_SM4_INSTRUCTION_LENGTH_SHIFT    24
 #define WINED3D_SM4_INSTRUCTION_LENGTH_MASK     (0x1f << WINED3D_SM4_INSTRUCTION_LENGTH_SHIFT)
 
+#define WINED3D_SM4_INTERP_MODE_TYPE_SHIFT      11
+#define WINED3D_SM4_INTERP_MODE_TYPE_MASK       (0x7 << WINED3D_SM4_INTERP_MODE_TYPE_SHIFT)
+
 #define WINED3D_SM4_PRIMITIVE_TYPE_SHIFT        11
 #define WINED3D_SM4_PRIMITIVE_TYPE_MASK         (0x7 << WINED3D_SM4_PRIMITIVE_TYPE_SHIFT)
 
@@ -125,6 +128,7 @@ enum wined3d_sm4_opcode
     WINED3D_SM4_OP_DCL_INPUT_PRIMITIVE  = 0x5d,
     WINED3D_SM4_OP_DCL_VERTICES_OUT     = 0x5e,
     WINED3D_SM4_OP_DCL_INPUT            = 0x5f,
+    WINED3D_SM4_OP_DCL_INPUT_PS         = 0x62,
 };
 
 enum wined3d_sm4_register_type
@@ -263,6 +267,7 @@ static const struct wined3d_sm4_opcode_info opcode_table[] =
     {WINED3D_SM4_OP_DCL_INPUT_PRIMITIVE,    WINED3DSIH_DCL_INPUT_PRIMITIVE, "",     ""},
     {WINED3D_SM4_OP_DCL_VERTICES_OUT,       WINED3DSIH_DCL_VERTICES_OUT,    "",     ""},
     {WINED3D_SM4_OP_DCL_INPUT,              WINED3DSIH_DCL_INPUT,           "U",     "UU"},
+    {WINED3D_SM4_OP_DCL_INPUT_PS,           WINED3DSIH_DCL_INPUT_PS,        "U",     "UU"},
 };
 
 static const enum wined3d_shader_register_type register_type_table[] =
@@ -281,6 +286,12 @@ static const enum wined3d_shader_register_type register_type_table[] =
     /* WINED3D_SM4_RT_PRIMID */         WINED3DSPR_PRIMID,
     /* UNKNOWN */                       0,
     /* WINED3D_SM4_RT_NULL */           WINED3DSPR_NULL,
+};
+
+static const enum wined3d_interpolation_mode_type input_interpolation_mode_type_table[] =
+{
+    /* WINED3D_SM4_INPUT_IMT_NONE */            WINED3D_IMT_NONE,
+    /* WINED3D_SM4_INPUT_IMT_LINEAR */          WINED3D_IMT_LINEAR,
 };
 
 static const enum wined3d_primitive_type output_primitive_type_table[] =
@@ -780,6 +791,20 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
     {
 
 
+
+        for (i = 0; i < ins->dst_count; ++i)
+        {
+            shader_sm4_read_dst_param(priv, &p, map_data_type(opcode_info->dst_info[i]), &priv->dst_param[i]);
+        }
+
+        ins->src_count = 0;
+    }
+    else if (opcode == WINED3D_SM4_OP_DCL_INPUT_PS)
+    {
+
+
+
+        ins->interpolation_mode_type = WINED3D_IMT_LINEAR;
 
         for (i = 0; i < ins->dst_count; ++i)
         {

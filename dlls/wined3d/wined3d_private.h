@@ -443,6 +443,7 @@ enum WINED3D_SHADER_INSTRUCTION_HANDLER
     WINED3DSIH_DCL_OUTPUT_TOPOLOGY,
     WINED3DSIH_DCL_VERTICES_OUT,
     WINED3DSIH_DCL_INPUT,
+    WINED3DSIH_DCL_INPUT_PS,
     WINED3DSIH_DEF,
     WINED3DSIH_DEFB,
     WINED3DSIH_DEFI,
@@ -682,6 +683,15 @@ struct wined3d_shader_instruction
         struct wined3d_shader_src_param src;
         UINT count;
     } declaration;
+
+    enum wined3d_interpolation_mode_type interpolation_mode_type;
+};
+
+
+enum wined3d_sm4_input_interpolation_mode_type
+{
+    WINED3D_SM4_INPUT_IMT_NONE       = 0x0,
+    WINED3D_SM4_INPUT_IMT_LINEAR     = 0x1,
 };
 
 struct wined3d_shader_attribute
