@@ -1272,6 +1272,7 @@ static HRESULT STDMETHODCALLTYPE d3d10_device_CreateTexture2D(ID3D10Device1 *ifa
     struct d3d10_device *This = impl_from_ID3D10Device(iface);
     struct d3d10_texture2d *object;
     HRESULT hr;
+    UINT i;
 
     FIXME("iface %p, desc %p, data %p, texture %p partial stub!\n", iface, desc, data, texture);
 
@@ -1291,6 +1292,22 @@ static HRESULT STDMETHODCALLTYPE d3d10_device_CreateTexture2D(ID3D10Device1 *ifa
 
     TRACE("Created ID3D10Texture2D %p\n", object);
 
+    if (data)
+    {
+        if (desc->ArraySize > 1)
+            FIXME("Texture arrays are not yet supported!\n");
+
+        for (i = 0; i < desc->MipLevels; i++)
+        {
+            hr = wined3d_texture_load_data(object->wined3d_texture, i, data[i].pSysMem, data[i].SysMemPitch, data[i].SysMemSlicePitch);
+            if (FAILED(hr))
+            {
+                WARN("Failed to load texture date for mipmap level %d\n", i);
+                ID3D10Texture2D_Release(*texture);
+                return hr;
+            }
+        }
+    }
     return S_OK;
 }
 
