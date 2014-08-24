@@ -2491,6 +2491,8 @@ struct wined3d_resource * __cdecl wined3d_texture_get_resource(struct wined3d_te
 struct wined3d_resource * __cdecl wined3d_texture_get_sub_resource(struct wined3d_texture *texture,
         UINT sub_resource_idx);
 ULONG __cdecl wined3d_texture_incref(struct wined3d_texture *texture);
+HRESULT __cdecl wined3d_texture_load_data(struct wined3d_texture *texture, UINT index,
+        const void *data, UINT row_pitch, UINT depth_pitch);
 void __cdecl wined3d_texture_preload(struct wined3d_texture *texture);
 HRESULT __cdecl wined3d_texture_set_autogen_filter_type(struct wined3d_texture *texture,
         enum wined3d_texture_filter_type filter_type);
