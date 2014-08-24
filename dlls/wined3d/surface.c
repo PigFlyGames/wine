@@ -4536,6 +4536,158 @@ static HRESULT surface_load_drawable(struct wined3d_surface *surface,
     return WINED3D_OK;
 }
 
+static void surface_multisample_resolve(struct wined3d_surface *surface)
+{
+    RECT rect = {0, 0, surface->resource.width, surface->resource.height};
+
+    if (!(surface->locations & WINED3D_LOCATION_RB_MULTISAMPLE))
+        ERR("Trying to resolve multisampled surface %p, but location WINED3D_LOCATION_RB_MULTISAMPLE not current.\n",
+                surface);
+
+    surface_blt_fbo(surface->resource.device, WINED3D_TEXF_POINT,
+            surface, WINED3D_LOCATION_RB_MULTISAMPLE, &rect, surface, WINED3D_LOCATION_RB_RESOLVED, &rect);
+}
+
+HRESULT surface_load_data(struct wined3d_surface *surface, BYTE *data, UINT row_pitch, BOOL srgb)
+{
+    RECT copy_rect = {0, 0, surface->resource.width, surface->resource.height};
+    struct wined3d_device *device = surface->resource.device;
+    enum wined3d_conversion_type convert;
+    struct wined3d_context *context;
+    struct wined3d_format format;
+    struct wined3d_bo_address src_data;
+    UINT width, dst_pitch;
+    POINT dst_point = {0, 0};
+    BYTE *mem = NULL;
+
+    /* TODO: Use already acquired context when possible. */
+    context = context_acquire(device, NULL);
+
+    surface_prepare_texture(surface, context, srgb);
+    wined3d_texture_bind_and_dirtify(surface->container, context, srgb);
+
+    d3dfmt_get_conv(surface, TRUE, TRUE, &format, &convert);
+    width = surface->resource.width;
+
+    /* Don't use PBOs for converted surfaces. During PBO conversion we look at
+     * SFLAG_CONVERTED but it isn't set (yet) in all cases it is getting
+     * called. */
+    if ((convert != WINED3D_CT_NONE || format.convert) && surface->pbo)
+    {
+        TRACE("Removing the pbo attached to surface %p.\n", surface);
+
+        if (surface->flags & SFLAG_DIBSECTION)
+            surface->resource.map_binding = WINED3D_LOCATION_DIB;
+        else
+            surface->resource.map_binding = WINED3D_LOCATION_SYSMEM;
+
+        surface_prepare_map_memory(surface);
+        surface_load_location(surface, surface->resource.map_binding);
+        surface_remove_pbo(surface, &device->adapter->gl_info);
+    }
+
+    if (format.convert)
+    {
+        /* This code is entered for texture formats which need a fixup. */
+        UINT height = surface->resource.height;
+
+        /* Stick to the alignment for the converted surface too, makes it easier to load the surface */
+        dst_pitch = width * format.conv_byte_count;
+        dst_pitch = (dst_pitch + device->surface_alignment - 1) & ~(device->surface_alignment - 1);
+
+        if (!(mem = HeapAlloc(GetProcessHeap(), 0, dst_pitch * height)))
+        {
+            ERR("Out of memory (%u).\n", dst_pitch * height);
+            context_release(context);
+            return E_OUTOFMEMORY;
+        }
+        format.convert(data, mem, row_pitch, row_pitch * height,
+                dst_pitch, dst_pitch * height, width, height, 1);
+        format.byte_count = format.conv_byte_count;
+        row_pitch = dst_pitch;
+        data = mem;
+    }
+    else if (convert != WINED3D_CT_NONE)
+    {
+        /* This code is only entered for color keying fixups */
+        UINT height = surface->resource.height;
+
+        /* Stick to the alignment for the converted surface too, makes it easier to load the surface */
+        dst_pitch = width * format.conv_byte_count;
+        dst_pitch = (dst_pitch + device->surface_alignment - 1) & ~(device->surface_alignment - 1);
+
+        if (!(mem = HeapAlloc(GetProcessHeap(), 0, dst_pitch * height)))
+        {
+            ERR("Out of memory (%u).\n", dst_pitch * height);
+            context_release(context);
+            return E_OUTOFMEMORY;
+        }
+        d3dfmt_convert_surface(data, mem, row_pitch,
+                width, height, dst_pitch, convert, surface);
+        format.byte_count = format.conv_byte_count;
+        row_pitch = dst_pitch;
+        data = mem;
+    }
+
+    src_data.buffer_object = 0;
+    src_data.addr = data;
+    surface_upload_data(surface, &device->adapter->gl_info, &format, &copy_rect, row_pitch, &dst_point, FALSE, &src_data);
+
+    context_release(context);
+
+    HeapFree(GetProcessHeap(), 0, mem);
+
+    return WINED3D_OK;
+}
+
+HRESULT surface_copy_data(struct wined3d_surface *surface, BYTE *data, UINT row_pitch, BOOL srgb)
+{
+    RECT copy_rect = {0, 0, surface->resource.width, surface->resource.height};
+    struct wined3d_device *device = surface->resource.device;
+    enum wined3d_conversion_type convert;
+    struct wined3d_context *context;
+    struct wined3d_format format;
+    struct wined3d_bo_address src_data;
+    UINT width, dst_pitch;
+    POINT dst_point = {0, 0};
+    BYTE *mem = NULL;
+
+    /* TODO: Use already acquired context when possible. */
+    context = context_acquire(device, NULL);
+
+    surface_prepare_texture(surface, context, srgb);
+    wined3d_texture_bind_and_dirtify(surface->container, context, srgb);
+
+    d3dfmt_get_conv(surface, TRUE, TRUE, &format, &convert);
+    width = surface->resource.width;
+
+    src_data.buffer_object = 0;
+    src_data.addr = data;
+
+    UINT update_w = copy_rect.right - copy_rect.left;
+    UINT update_h = copy_rect.bottom - copy_rect.top;
+
+    int i=0;
+    int size =  update_w * update_h * format.byte_count;
+
+    struct wined3d_map_desc dst_map;
+    const BYTE *addr = src_data.addr;
+
+    wined3d_surface_map(surface, &dst_map, NULL, 0);
+    for (i=0;i<size;i++)
+    {
+        ((BYTE*)dst_map.data)[i] = addr[i];
+    }
+    wined3d_surface_unmap(surface);
+
+
+    context_release(context);
+
+    HeapFree(GetProcessHeap(), 0, mem);
+
+    return WINED3D_OK;
+}
+
 static HRESULT surface_load_texture(struct wined3d_surface *surface,
         const struct wined3d_gl_info *gl_info, BOOL srgb)
 {
@@ -4711,18 +4863,6 @@ static HRESULT surface_load_texture(struct wined3d_surface *surface,
     HeapFree(GetProcessHeap(), 0, mem);
 
     return WINED3D_OK;
-}
-
-static void surface_multisample_resolve(struct wined3d_surface *surface)
-{
-    RECT rect = {0, 0, surface->resource.width, surface->resource.height};
-
-    if (!(surface->locations & WINED3D_LOCATION_RB_MULTISAMPLE))
-        ERR("Trying to resolve multisampled surface %p, but location WINED3D_LOCATION_RB_MULTISAMPLE not current.\n",
-                surface);
-
-    surface_blt_fbo(surface->resource.device, WINED3D_TEXF_POINT,
-            surface, WINED3D_LOCATION_RB_MULTISAMPLE, &rect, surface, WINED3D_LOCATION_RB_RESOLVED, &rect);
 }
 
 HRESULT surface_load_location(struct wined3d_surface *surface, DWORD location)
@@ -6076,3 +6216,5 @@ HRESULT wined3d_surface_create(struct wined3d_texture *container, const struct w
 
     return hr;
 }
+
+

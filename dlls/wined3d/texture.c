@@ -747,6 +747,15 @@ static void texture2d_sub_resource_load(struct wined3d_resource *sub_resource,
     surface_load(surface_from_resource(sub_resource), srgb);
 }
 
+HRESULT CDECL wined3d_texture_load_data(struct wined3d_texture *texture,
+        UINT index, const void *data, UINT row_pitch, UINT depth_pitch)
+{
+    struct wined3d_resource *sub_resource = wined3d_texture_get_sub_resource(texture, index);
+    struct wined3d_surface *surface = surface_from_resource(sub_resource);
+    surface_copy_data(surface, (BYTE*) data, row_pitch, texture->flags & WINED3D_TEXTURE_IS_SRGB);
+    return surface_load_data(surface, (BYTE*) data, row_pitch, texture->flags & WINED3D_TEXTURE_IS_SRGB);
+}
+
 static void texture2d_sub_resource_add_dirty_region(struct wined3d_resource *sub_resource,
         const struct wined3d_box *dirty_region)
 {
