@@ -4141,6 +4141,21 @@ static void shader_glsl_input_pack(const struct wined3d_shader *shader, struct w
 /*********************************************
  * Vertex Shader Specific Code begins here
  ********************************************/
+static void shader_glsl_sample(const struct wined3d_shader_instruction *ins)
+{
+    struct wined3d_shader_buffer *buffer = ins->ctx->buffer;
+    struct glsl_dst_param dst_param;
+    unsigned int mask_size;
+    DWORD write_mask;
+    char dst_mask[6];
+    struct glsl_src_param src0_param;
+    write_mask = shader_glsl_get_write_mask(ins->dst, dst_mask);
+    mask_size = shader_glsl_get_write_mask_size(write_mask);
+    shader_glsl_add_dst_param(ins, &ins->dst[0], &dst_param);
+    shader_glsl_add_src_param(ins, &ins->src[0], write_mask, &src0_param);
+    shader_addline(buffer, "%s =  texture2D(ps_sampler0, vec2(%s));\n", dst_param.reg_name, src0_param.param_str);
+}
+
 
 static void add_glsl_program_entry(struct shader_glsl_priv *priv, struct glsl_shader_prog_link *entry)
 {
@@ -6738,7 +6753,7 @@ static const SHADER_HANDLER shader_glsl_instruction_handler_table[WINED3DSIH_TAB
     /* WINED3DSIH_RET                   */ shader_glsl_ret,
     /* WINED3DSIH_ROUND_NI              */ shader_glsl_map2gl,
     /* WINED3DSIH_RSQ                   */ shader_glsl_scalar_op,
-    /* WINED3DSIH_SAMPLE                */ NULL,
+    /* WINED3DSIH_SAMPLE                */ shader_glsl_sample,
     /* WINED3DSIH_SAMPLE_GRAD           */ NULL,
     /* WINED3DSIH_SAMPLE_LOD            */ NULL,
     /* WINED3DSIH_SETP                  */ NULL,
