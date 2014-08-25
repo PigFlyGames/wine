@@ -127,6 +127,7 @@ enum wined3d_sm4_opcode
     WINED3D_SM4_OP_USHR                 = 0x55,
     WINED3D_SM4_OP_UTOF                 = 0x56,
     WINED3D_SM4_OP_XOR                  = 0x57,
+    WINED3D_SM4_OP_DCL_RESOURCE         = 0x58,
     WINED3D_SM4_OP_DCL_CONSTANT_BUFFER  = 0x59,
     WINED3D_SM4_OP_DCL_OUTPUT_TOPOLOGY  = 0x5c,
     WINED3D_SM4_OP_DCL_INPUT_PRIMITIVE  = 0x5d,
@@ -269,6 +270,7 @@ static const struct wined3d_sm4_opcode_info opcode_table[] =
     {WINED3D_SM4_OP_USHR,                   WINED3DSIH_USHR,                "U",    "UU"},
     {WINED3D_SM4_OP_UTOF,                   WINED3DSIH_UTOF,                "F",    "U"},
     {WINED3D_SM4_OP_XOR,                    WINED3DSIH_XOR,                 "U",    "UU"},
+    {WINED3D_SM4_OP_DCL_RESOURCE,           WINED3DSIH_DCL_RESOURCE,        "U",    "UU"},
     {WINED3D_SM4_OP_DCL_CONSTANT_BUFFER,    WINED3DSIH_DCL_CONSTANT_BUFFER, "",     ""},
     {WINED3D_SM4_OP_DCL_OUTPUT_TOPOLOGY,    WINED3DSIH_DCL_OUTPUT_TOPOLOGY, "",     ""},
     {WINED3D_SM4_OP_DCL_INPUT_PRIMITIVE,    WINED3DSIH_DCL_INPUT_PRIMITIVE, "",     ""},
@@ -764,7 +766,24 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
         FIXME("Skipping modifier 0x%08x.\n", modifier);
     }
 
-    if (opcode == WINED3D_SM4_OP_DCL_CONSTANT_BUFFER)
+    if (opcode == WINED3D_SM4_OP_DCL_RESOURCE)
+    {
+
+        for (i = 0; i < ins->dst_count; ++i)
+        {
+            shader_sm4_read_dst_param(priv, &p, map_data_type(opcode_info->dst_info[i]), &priv->dst_param[i]);
+            priv->dst_param[i].reg.type = WINED3DSPR_RESOURCE;
+            priv->dst_param[i].reg.idx[0].offset = 0;
+        }
+
+        for (i = 0; i < ins->src_count; ++i)
+        {
+            shader_sm4_read_src_param(priv, &p, map_data_type(opcode_info->src_info[i]), &priv->src_param[i]);
+            priv->src_param[i].reg.type = WINED3DSPR_RESOURCE;
+            priv->src_param[i].reg.idx[0].offset = 0;
+        }
+    }
+    else if (opcode == WINED3D_SM4_OP_DCL_CONSTANT_BUFFER)
     {
         shader_sm4_read_src_param(priv, &p, WINED3D_DATA_FLOAT, &ins->declaration.src);
         if (opcode_token & WINED3D_SM4_INDEX_TYPE_MASK)
