@@ -54,6 +54,7 @@ static const char * const shader_opcode_names[] =
     /* WINED3DSIH_CRS                   */ "crs",
     /* WINED3DSIH_CUT                   */ "cut",
     /* WINED3DSIH_DCL                   */ "dcl",
+    /* WINED3DSIH_DCL_RESOURCE          */ "dcl_resource",
     /* WINED3DSIH_DCL_CONSTANT_BUFFER   */ "dcl_constantBuffer",
     /* WINED3DSIH_DCL_INPUT_PRIMITIVE   */ "dcl_inputPrimitive",
     /* WINED3DSIH_DCL_OUTPUT_TOPOLOGY   */ "dcl_outputTopology",
@@ -559,6 +560,11 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, const st
                     TRACE("Not recording DCL register type %#x.\n", semantic->reg.reg.type);
                     break;
             }
+        }
+        else if (ins.handler_idx == WINED3DSIH_DCL_RESOURCE)
+        {
+                FIXME("Instruction %#x for shader type %#x needs to be implemented.\n",
+                        ins.handler_idx, shader_version.type);
         }
         else if (ins.handler_idx == WINED3DSIH_DCL_CONSTANT_BUFFER)
         {
@@ -1452,6 +1458,24 @@ static void shader_trace_init(const struct wined3d_shader_frontend *fe, void *fe
             shader_dump_ins_modifiers(&ins.declaration.semantic.reg);
             TRACE(" ");
             shader_dump_dst_param(&ins.declaration.semantic.reg, &shader_version);
+        }
+        else if (ins.handler_idx == WINED3DSIH_DCL_RESOURCE)
+        {
+            TRACE("%s", shader_opcode_names[ins.handler_idx]);
+
+            for (i = 0; i < ins.dst_count; ++i)
+            {
+                shader_dump_ins_modifiers(&ins.dst[i]);
+                TRACE(!i ? " " : ", ");
+                shader_dump_dst_param(&ins.dst[i], &shader_version);
+            }
+
+            /* Other source tokens */
+            for (i = ins.dst_count; i < (ins.dst_count + ins.src_count); ++i)
+            {
+                TRACE(!i ? " " : ", ");
+                shader_dump_src_param(&ins.src[i - ins.dst_count], &shader_version);
+            }
         }
         else if (ins.handler_idx == WINED3DSIH_DCL_CONSTANT_BUFFER)
         {
