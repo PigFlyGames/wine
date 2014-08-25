@@ -56,6 +56,7 @@ static const char * const shader_opcode_names[] =
     /* WINED3DSIH_DCL                   */ "dcl",
     /* WINED3DSIH_DCL_RESOURCE          */ "dcl_resource",
     /* WINED3DSIH_DCL_CONSTANT_BUFFER   */ "dcl_constantBuffer",
+    /* WINED3DSIH_DCL_SAMPLER           */ "dcl_sampler",
     /* WINED3DSIH_DCL_INPUT_PRIMITIVE   */ "dcl_inputPrimitive",
     /* WINED3DSIH_DCL_OUTPUT_TOPOLOGY   */ "dcl_outputTopology",
     /* WINED3DSIH_DCL_VERTICES_OUT      */ "dcl_maxOutputVertexCount",
@@ -573,6 +574,25 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, const st
                 ERR("Invalid CB index %u.\n", reg->idx[0].offset);
             else
                 reg_maps->cb_sizes[reg->idx[0].offset] = reg->idx[1].offset;
+        }
+        else if (ins.handler_idx == WINED3DSIH_DCL_SAMPLER)
+        {
+            /* Fake sampler usage, only set reserved bit and type. */
+            DWORD sampler_code = ins.dst[0].reg.idx[0].offset;
+
+            TRACE("Setting fake 2D sampler for 1.x pixelshader.\n");
+            reg_maps->sampler_type[sampler_code] = WINED3DSTT_2D;
+
+            /* texbem is only valid with < 1.4 pixel shaders */
+            if (ins.handler_idx == WINED3DSIH_TEXBEM
+                    || ins.handler_idx == WINED3DSIH_TEXBEML)
+            {
+                reg_maps->bumpmat |= 1 << ins.dst[0].reg.idx[0].offset;
+                if (ins.handler_idx == WINED3DSIH_TEXBEML)
+                {
+                    reg_maps->luminanceparams |= 1 << ins.dst[0].reg.idx[0].offset;
+                }
+            }
         }
         else if (ins.handler_idx == WINED3DSIH_DCL_INPUT_PRIMITIVE)
         {
@@ -1482,6 +1502,20 @@ static void shader_trace_init(const struct wined3d_shader_frontend *fe, void *fe
             TRACE("%s ", shader_opcode_names[ins.handler_idx]);
             shader_dump_src_param(&ins.declaration.src, &shader_version);
             TRACE(", %s", ins.flags & WINED3DSI_INDEXED_DYNAMIC ? "dynamicIndexed" : "immediateIndexed");
+        }
+        else if (ins.handler_idx == WINED3DSIH_DCL_SAMPLER)
+        {
+            TRACE("%s", shader_opcode_names[ins.handler_idx]);
+
+            for (i = 0; i < ins.dst_count; ++i)
+            {
+                shader_dump_ins_modifiers(&ins.dst[i]);
+                TRACE(!i ? " " : ", ");
+                shader_dump_dst_param(&ins.dst[i], &shader_version);
+            }
+
+            TRACE(", default\n");
+            FIXME("Need to add DCL_SAMPLER modes, only default currently supported.\n");
         }
         else if (ins.handler_idx == WINED3DSIH_DCL_INPUT_PRIMITIVE
                 || ins.handler_idx == WINED3DSIH_DCL_OUTPUT_TOPOLOGY)

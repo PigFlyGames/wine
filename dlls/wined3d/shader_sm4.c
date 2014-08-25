@@ -129,6 +129,7 @@ enum wined3d_sm4_opcode
     WINED3D_SM4_OP_XOR                  = 0x57,
     WINED3D_SM4_OP_DCL_RESOURCE         = 0x58,
     WINED3D_SM4_OP_DCL_CONSTANT_BUFFER  = 0x59,
+    WINED3D_SM4_OP_DCL_SAMPLER          = 0x5a,
     WINED3D_SM4_OP_DCL_OUTPUT_TOPOLOGY  = 0x5c,
     WINED3D_SM4_OP_DCL_INPUT_PRIMITIVE  = 0x5d,
     WINED3D_SM4_OP_DCL_VERTICES_OUT     = 0x5e,
@@ -272,6 +273,7 @@ static const struct wined3d_sm4_opcode_info opcode_table[] =
     {WINED3D_SM4_OP_XOR,                    WINED3DSIH_XOR,                 "U",    "UU"},
     {WINED3D_SM4_OP_DCL_RESOURCE,           WINED3DSIH_DCL_RESOURCE,        "U",    "UU"},
     {WINED3D_SM4_OP_DCL_CONSTANT_BUFFER,    WINED3DSIH_DCL_CONSTANT_BUFFER, "",     ""},
+    {WINED3D_SM4_OP_DCL_SAMPLER,            WINED3DSIH_DCL_SAMPLER,         "U",    "UU"},
     {WINED3D_SM4_OP_DCL_OUTPUT_TOPOLOGY,    WINED3DSIH_DCL_OUTPUT_TOPOLOGY, "",     ""},
     {WINED3D_SM4_OP_DCL_INPUT_PRIMITIVE,    WINED3DSIH_DCL_INPUT_PRIMITIVE, "",     ""},
     {WINED3D_SM4_OP_DCL_VERTICES_OUT,       WINED3DSIH_DCL_VERTICES_OUT,    "",     ""},
@@ -788,6 +790,13 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
         shader_sm4_read_src_param(priv, &p, WINED3D_DATA_FLOAT, &ins->declaration.src);
         if (opcode_token & WINED3D_SM4_INDEX_TYPE_MASK)
             ins->flags |= WINED3DSI_INDEXED_DYNAMIC;
+    }
+    if (opcode == WINED3D_SM4_OP_DCL_SAMPLER)
+    {
+        for (i = 0; i < ins->dst_count; ++i)
+        {
+            shader_sm4_read_dst_param(priv, &p, map_data_type(opcode_info->dst_info[i]), &priv->dst_param[i]);
+        }
     }
     else if (opcode == WINED3D_SM4_OP_DCL_OUTPUT_TOPOLOGY)
     {
