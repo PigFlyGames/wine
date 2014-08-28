@@ -1552,6 +1552,18 @@ static void surface_upload_data(struct wined3d_surface *surface, const struct wi
                 surface->texture_target, surface->texture_level, dst_point->x, dst_point->y,
                 update_w, update_h, format->glFormat, format->glType, addr);
 
+        struct wined3d_format *format_check = format;
+        int i=0;
+        int size =  update_w * update_h * 4;
+        // copy the data to the surface
+        struct wined3d_map_desc dst_map;
+        wined3d_surface_map(surface, &dst_map, NULL, 0);
+        for (i=0;i<size;i++)
+        {
+            ((BYTE*)dst_map.data)[i] = addr[i];
+        }
+        wined3d_surface_unmap(surface);
+
         gl_info->gl_ops.gl.p_glPixelStorei(GL_UNPACK_ROW_LENGTH, src_pitch / format->byte_count);
         gl_info->gl_ops.gl.p_glTexSubImage2D(surface->texture_target, surface->texture_level,
                 dst_point->x, dst_point->y, update_w, update_h, format->glFormat, format->glType, addr);
@@ -1811,8 +1823,10 @@ HRESULT surface_upload_from_surface(struct wined3d_surface *dst_surface, const P
 
     /* Use wined3d_surface_blt() instead of uploading directly if we need conversion. */
     d3dfmt_get_conv(dst_surface, FALSE, TRUE, &format, &convert);
-    if (convert != WINED3D_CT_NONE || format.convert)
+    if (convert != WINED3D_CT_NONE || format.convert || format.glFormat == 0)
+    {
         return wined3d_surface_blt(dst_surface, &dst_rect, src_surface, src_rect, 0, NULL, WINED3D_TEXF_POINT);
+    }
 
     context = context_acquire(dst_surface->resource.device, NULL);
     gl_info = context->gl_info;
@@ -1860,6 +1874,18 @@ static void surface_allocate_surface(struct wined3d_surface *surface, const stru
         internal = format->rtInternal;
     else
         internal = format->glInternal;
+
+    struct wined3d_format *format_check = format;
+    if( format->glFormat == 0)
+    {
+       /* Handle the type here, determine this dynamically */
+       internal = GL_RGBA8;
+       format_check->glFormat = GL_RGB;
+       format_check->glType = GL_UNSIGNED_BYTE;
+       TRACE("dynamically determining type before uploading texture to card\n");
+
+    }
+
 
     if (!internal)
         FIXME("No GL internal format for format %s.\n", debug_d3dformat(format->id));
@@ -4408,6 +4434,9 @@ void surface_validate_location(struct wined3d_surface *surface, DWORD location)
 void surface_invalidate_location(struct wined3d_surface *surface, DWORD location)
 {
     TRACE("surface %p, location %s.\n", surface, wined3d_debug_location(location));
+    if (location == 0xffffc00)
+       location = (WINED3D_LOCATION_TEXTURE_RGB | WINED3D_LOCATION_TEXTURE_SRGB);
+
 
     if (location & (WINED3D_LOCATION_TEXTURE_RGB | WINED3D_LOCATION_TEXTURE_SRGB))
         wined3d_texture_set_dirty(surface->container);
@@ -4824,6 +4853,8 @@ HRESULT surface_load_location(struct wined3d_surface *surface, DWORD location)
     HRESULT hr;
 
     TRACE("surface %p, location %s.\n", surface, wined3d_debug_location(location));
+    if (location == 0xffffc00)
+        location = 0;
 
     if (surface->resource.usage & WINED3DUSAGE_DEPTHSTENCIL)
     {
@@ -6098,6 +6129,7 @@ static HRESULT surface_init(struct wined3d_surface *surface, struct wined3d_text
     if (lockable || desc->format == WINED3DFMT_D16_LOCKABLE)
         surface->resource.access_flags |= WINED3D_RESOURCE_ACCESS_CPU;
 
+    surface->resource.map_binding = WINED3D_LOCATION_SYSMEM;
     surface->texture_target = target;
     surface->texture_level = level;
     surface->texture_layer = layer;
@@ -6135,7 +6167,18 @@ HRESULT wined3d_surface_create(struct wined3d_texture *container, const struct w
     struct wined3d_surface *object;
     void *parent;
     HRESULT hr;
-
+    int fixsurface = 0;
+    if(desc->format == WINED3DFMT_R8G8B8A8_TYPELESS)
+    {
+        fixsurface = 1;
+        *((int *)&(desc->format)) = WINED3DFMT_R8G8B8A8_UNORM;
+        *((int *)&(desc->usage)) = 0;
+    }
+    if (desc->usage == 0x10000000)
+    {
+        fixsurface = 1;
+        *((int *)&(desc->usage)) = 0;
+    }
     TRACE("container %p, width %u, height %u, format %s, usage %s (%#x), pool %s, "
             "multisample_type %#x, multisample_quality %u, target %#x, level %u, layer %u, flags %#x, surface %p.\n",
             container, desc->width, desc->height, debug_d3dformat(desc->format),
@@ -6165,6 +6208,8 @@ HRESULT wined3d_surface_create(struct wined3d_texture *container, const struct w
     object->resource.parent = parent;
     object->resource.parent_ops = parent_ops;
     *surface = object;
+    if (fixsurface == 1)
+        (*surface)->resource.access_flags |= WINED3D_RESOURCE_ACCESS_CPU;
 
     return hr;
 }
