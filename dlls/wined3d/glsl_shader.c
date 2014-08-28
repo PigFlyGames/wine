@@ -4267,7 +4267,7 @@ static void handle_ps3_input(struct wined3d_shader_buffer *buffer,
             shader_glsl_write_mask_to_str(mask, reg_mask);
 
             shader_addline(buffer, "%s%s = vs_out[%u]%s;\n",
-                    destination, reg_mask, j, reg_mask);
+                    destination, reg_mask, in_idx, reg_mask);
         }
     }
 
@@ -4395,6 +4395,33 @@ static GLhandleARB generate_param_reorder_function(struct wined3d_shader_buffer 
             else if (shader_match_semantic(semantic_name, WINED3D_DECL_USAGE_PSIZE))
             {
                 shader_addline(buffer, "gl_PointSize = vs_out[%u].%c;\n", i, reg_mask[1]);
+            }
+            else if (shader_match_semantic(semantic_name, WINED3D_DECL_USAGE_COLOR))
+            {
+                if(ps->input_signature[i].semantic_name == NULL ||
+                   strcmp(ps->input_signature[i].semantic_name, "COLOR") != 0)
+                {
+                   char **temp = (char **)&(ps->input_signature[i].semantic_name);
+                   *temp = strdup("COLOR");
+                }
+            }
+            else if (shader_match_semantic(semantic_name, WINED3D_DECL_USAGE_NORMAL))
+            {
+                if(ps->input_signature[i].semantic_name == NULL ||
+                   strcmp(ps->input_signature[i].semantic_name, "NORMAL") != 0)
+                {
+                   char **temp = (char **)&(ps->input_signature[i].semantic_name);
+                   *temp = strdup("NORMAL");
+                }
+            }
+            else if (shader_match_semantic(semantic_name, WINED3D_DECL_USAGE_TEXCOORD))
+            {
+                if(ps->input_signature[i].semantic_name == NULL ||
+                   strcmp(ps->input_signature[i].semantic_name, "TEXCOORD") != 0)
+                {
+                   char **temp = (char **)&(ps->input_signature[i].semantic_name);
+                   *temp = strdup("TEXCOORD");
+                }
             }
         }
 
