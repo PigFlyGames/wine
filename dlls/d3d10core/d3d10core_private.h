@@ -113,6 +113,9 @@ struct d3d10_buffer
 
     struct wined3d_buffer *wined3d_buffer;
     ID3D10Device1 *device;
+    REFGUID guid;
+    UINT data_size;
+    void *data;
 };
 
 HRESULT d3d10_buffer_init(struct d3d10_buffer *buffer, struct d3d10_device *device,
