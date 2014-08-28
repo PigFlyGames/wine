@@ -104,8 +104,14 @@ static HRESULT STDMETHODCALLTYPE d3d10_buffer_GetPrivateData(ID3D10Buffer *iface
 {
     FIXME("iface %p, guid %s, data_size %p, data %p stub!\n",
             iface, debugstr_guid(guid), data_size, data);
+    struct d3d10_buffer *buffer = impl_from_ID3D10Buffer(iface);
 
-    return E_NOTIMPL;
+    buffer->data = malloc(data_size);
+    if(buffer->data != NULL)
+       memcpy(data, buffer->data, data_size);
+
+
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE d3d10_buffer_SetPrivateData(ID3D10Buffer *iface,
@@ -113,8 +119,12 @@ static HRESULT STDMETHODCALLTYPE d3d10_buffer_SetPrivateData(ID3D10Buffer *iface
 {
     FIXME("iface %p, guid %s, data_size %u, data %p stub!\n",
             iface, debugstr_guid(guid), data_size, data);
+    struct d3d10_buffer *buffer = impl_from_ID3D10Buffer(iface);
 
-    return E_NOTIMPL;
+    buffer->data = malloc(data_size);
+    memcpy(buffer->data, data, data_size);
+
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE d3d10_buffer_SetPrivateDataInterface(ID3D10Buffer *iface,
