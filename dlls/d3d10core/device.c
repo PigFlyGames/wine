@@ -140,11 +140,61 @@ static void STDMETHODCALLTYPE d3d10_device_VSSetConstantBuffers(ID3D10Device1 *i
     }
 }
 
+static void set_ps_shader_resource(struct d3d10_device *device, struct d3d10_shader_resource_view *d3d10_view,
+    struct wined3d_resource *resource)
+{
+    if (d3d10_view->desc.ViewDimension == D3D10_SRV_DIMENSION_TEXTURE2D)
+    {
+        wined3d_mutex_lock();
+        wined3d_device_set_texture_from_resource(device->wined3d_device, 0, resource);
+        wined3d_mutex_unlock();
+    }
+    else
+        FIXME("Resource type %d not yet supported\n", d3d10_view->desc.ViewDimension);
+}
+
 static void STDMETHODCALLTYPE d3d10_device_PSSetShaderResources(ID3D10Device1 *iface,
         UINT start_slot, UINT view_count, ID3D10ShaderResourceView *const *views)
 {
-    FIXME("iface %p, start_slot %u, view_count %u, views %p stub!\n",
+    struct d3d10_device *device = impl_from_ID3D10Device(iface);
+    struct d3d10_shader_resource_view *d3d10_resource_view;
+    struct wined3d_resource *resource;
+    UINT i;
+
+    TRACE("iface %p, start_slot %u, view_count %u, views %p stub!\n",
             iface, start_slot, view_count, views);
+
+    if (start_slot >= D3D10_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT)
+        return;
+
+    /* TODO: check how windows behaves */
+    if (view_count > D3D10_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT - start_slot)
+        return;
+
+    if (!views)
+        return;
+
+    for (i = start_slot; i < start_slot + view_count; i++)
+    {
+
+        if (device->ps_resource_views[i])
+        {
+            /* unset old resource */
+            d3d10_resource_view = impl_from_ID3D10ShaderResourceView(device->ps_resource_views[i]);
+            set_ps_shader_resource(device, d3d10_resource_view, NULL);
+        }
+
+        if (views[i])
+        {
+            /* set new resource */
+            d3d10_resource_view = impl_from_ID3D10ShaderResourceView(views[i]);
+            resource = wined3d_resource_from_resource(d3d10_resource_view->resource);
+            set_ps_shader_resource(device, d3d10_resource_view, resource);
+        }
+
+        device->ps_resource_views[i] = views[i];
+    }
+
 }
 
 static void STDMETHODCALLTYPE d3d10_device_PSSetShader(ID3D10Device1 *iface,
@@ -645,8 +695,29 @@ static void STDMETHODCALLTYPE d3d10_device_VSGetConstantBuffers(ID3D10Device1 *i
 static void STDMETHODCALLTYPE d3d10_device_PSGetShaderResources(ID3D10Device1 *iface,
         UINT start_slot, UINT view_count, ID3D10ShaderResourceView **views)
 {
+    struct d3d10_device *device = impl_from_ID3D10Device(iface);
+    UINT i;
+
     FIXME("iface %p, start_slot %u, view_count %u, views %p stub!\n",
             iface, start_slot, view_count, views);
+
+    if (!views)
+        return;
+
+    if (start_slot >= D3D10_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT)
+        return;
+
+    /* TODO: check how windows behaves */
+    if (view_count > D3D10_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT - start_slot)
+        return;
+
+    for (i = start_slot; i < start_slot + view_count; i++)
+    {
+        views[i] = device->ps_resource_views[i];
+        if (views[i] != NULL)
+           ID3D10ShaderResourceView_AddRef(views[i]);
+    }
+
 }
 
 static void STDMETHODCALLTYPE d3d10_device_PSGetShader(ID3D10Device1 *iface, ID3D10PixelShader **shader)
