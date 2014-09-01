@@ -3049,6 +3049,13 @@ HRESULT CDECL wined3d_device_set_texture(struct wined3d_device *device,
     return WINED3D_OK;
 }
 
+HRESULT CDECL wined3d_device_set_texture_from_resource(struct wined3d_device *device,
+        UINT stage, struct wined3d_resource *resource)
+{
+    struct wined3d_texture *texture = wined3d_texture_from_resource(resource);
+    return wined3d_device_set_texture(device, stage, texture);
+}
+
 struct wined3d_texture * CDECL wined3d_device_get_texture(const struct wined3d_device *device, UINT stage)
 {
     TRACE("device %p, stage %u.\n", device, stage);

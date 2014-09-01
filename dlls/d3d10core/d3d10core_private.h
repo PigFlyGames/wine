@@ -165,6 +165,11 @@ struct d3d10_shader_resource_view
 HRESULT d3d10_shader_resource_view_init(struct d3d10_shader_resource_view *view, struct d3d10_device *device,
         ID3D10Resource *resource, const D3D10_SHADER_RESOURCE_VIEW_DESC *desc) DECLSPEC_HIDDEN;
 
+static inline struct d3d10_shader_resource_view *impl_from_ID3D10ShaderResourceView(ID3D10ShaderResourceView *iface)
+{
+    return CONTAINING_RECORD(iface, struct d3d10_shader_resource_view, ID3D10ShaderResourceView_iface);
+}
+
 /* ID3D10InputLayout */
 struct d3d10_input_layout
 {
@@ -324,6 +329,7 @@ struct d3d10_device
     struct d3d10_depthstencil_state *depth_stencil_state;
     UINT stencil_ref;
     struct d3d10_rasterizer_state *rasterizer_state;
+    struct ID3D10ShaderResourceView* ps_resource_views[D3D10_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT];
 };
 
 static inline struct d3d10_device *impl_from_ID3D10Device(ID3D10Device1 *iface)
