@@ -1250,8 +1250,20 @@ static void shader_generate_glsl_declarations(const struct wined3d_context *cont
     }
 
     /* Declare output register temporaries */
-    if (shader->limits.packed_output)
-        shader_addline(buffer, "vec4 %s_out[%u];\n", prefix, shader->limits.packed_output);
+    if (prefix[0] == 'g')
+    {
+        /* if we're in the geometry shader */
+        if (shader->limits.packed_output)
+        {
+            /* output of the geometry shader is ps_in */
+            shader_addline(buffer, "varying out vec4 ps_in[%u];\n", shader->limits.packed_output);
+        }
+    }
+    else
+    {
+        if (shader->limits.packed_output)
+            shader_addline(buffer, "vec4 %s_out[%u];\n", prefix, shader->limits.packed_output);
+    }
 
     /* Declare temporary variables */
     for (i = 0, map = reg_maps->temporary; map; map >>= 1, ++i)
@@ -1570,7 +1582,14 @@ static void shader_glsl_get_register_name(const struct wined3d_shader_register *
 
         case WINED3DSPR_TEXCRDOUT:
             /* Vertex shaders >= 3.0: WINED3DSPR_OUTPUT */
-            sprintf(register_name, "%s_out[%u]", prefix, reg->idx[0].offset);
+            if(prefix[0] == 'g')
+            {
+                sprintf(register_name, "ps_in[%u]", reg->idx[0].offset);
+            }
+            else
+            {
+                sprintf(register_name, "%s_out[%u]", prefix, reg->idx[0].offset);
+            }
             break;
 
         case WINED3DSPR_MISCTYPE:
@@ -3382,6 +3401,10 @@ static void shader_glsl_else(const struct wined3d_shader_instruction *ins)
 
 static void shader_glsl_emit(const struct wined3d_shader_instruction *ins)
 {
+    /* TODO: we need to figure out which output is position based on usage */
+    shader_addline(ins->ctx->buffer, "gl_Position = ps_in[0];\n");
+    /* TODO: This should be done using posFix */
+    shader_addline(ins->ctx->buffer, "gl_Position.y = ps_in[0].y * -1;\n");
     shader_addline(ins->ctx->buffer, "EmitVertex();\n");
 }
 
@@ -4376,6 +4399,8 @@ static GLhandleARB generate_param_reorder_function(struct wined3d_shader_buffer 
     {
         UINT in_count = min(vec4_varyings(ps_major, gl_info), ps->limits.packed_input);
         /* This one is tricky: a 3.0 pixel shader reads from a 3.0 vertex shader */
+        /* if we have a geometry shader, use gs_in */
+        shader_addline(buffer, "varying vec4 gs_in[%u];\n", in_count);
         shader_addline(buffer, "varying vec4 ps_in[%u];\n", in_count);
         shader_addline(buffer, "void order_ps_input(in vec4 vs_out[%u])\n{\n", vs->limits.packed_output);
 
@@ -4428,6 +4453,16 @@ static GLhandleARB generate_param_reorder_function(struct wined3d_shader_buffer 
         /* Then, fix the pixel shader input */
         handle_ps3_input(buffer, gl_info, ps->u.ps.input_reg_map, ps->input_signature,
                 &ps->reg_maps, output_signature, &vs->reg_maps);
+
+
+        /* pass vertex data to geometry shader, we should do this in a loop maybe */
+        shader_addline(buffer, "gs_in[0].xyzw = vs_out[0].xyzw;\n");
+        shader_addline(buffer, "gs_in[1].xyzw = vs_out[1].xyzw;\n");
+        shader_addline(buffer, "gs_in[2].xyzw = vs_out[2].xyzw;\n");
+        shader_addline(buffer, "gs_in[3].xyzw = vs_out[3].xyzw;\n");
+        shader_addline(buffer, "gs_in[4].xyzw = vs_out[4].xyzw;\n");
+        shader_addline(buffer, "gs_in[5].xyzw = vs_out[5].xyzw;\n");
+        shader_addline(buffer, "gs_in[6].xyzw = vs_out[6].xyzw;\n");
 
         shader_addline(buffer, "}\n");
     }
