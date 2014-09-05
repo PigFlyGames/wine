@@ -493,6 +493,7 @@ static void STDMETHODCALLTYPE d3d10_device_OMSetBlendState(ID3D10Device1 *iface,
         ID3D10BlendState *blend_state, const FLOAT blend_factor[4], UINT sample_mask)
 {
     struct d3d10_device *device = impl_from_ID3D10Device(iface);
+    D3D10_BLEND_DESC *desc;
 
     TRACE("iface %p, blend_state %p, blend_factor [%f %f %f %f], sample_mask 0x%08x.\n",
             iface, blend_state, blend_factor[0], blend_factor[1], blend_factor[2], blend_factor[3], sample_mask);
@@ -500,6 +501,21 @@ static void STDMETHODCALLTYPE d3d10_device_OMSetBlendState(ID3D10Device1 *iface,
     device->blend_state = unsafe_impl_from_ID3D10BlendState(blend_state);
     memcpy(device->blend_factor, blend_factor, 4 * sizeof(*blend_factor));
     device->sample_mask = sample_mask;
+
+    desc = &device->blend_state->desc;
+
+    wined3d_mutex_lock();
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ALPHABLENDENABLE, desc->BlendEnable[0]);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_SRCBLEND, desc->SrcBlend);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_DESTBLEND, desc->DestBlend);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_BLENDOP, desc->BlendOp);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_SRCBLENDALPHA, desc->SrcBlendAlpha);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_DESTBLENDALPHA, desc->DestBlendAlpha);
+    wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_BLENDOPALPHA, desc->BlendOpAlpha);
+    /* TODO: Need to use AlphaToCoverageEnable and RenderTargetWriteMask[] and BlendEnable[1-7] */
+
+    wined3d_mutex_unlock();
+
 }
 
 static void STDMETHODCALLTYPE d3d10_device_OMSetDepthStencilState(ID3D10Device1 *iface,
