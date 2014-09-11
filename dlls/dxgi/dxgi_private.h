@@ -130,6 +130,11 @@ struct dxgi_swapchain
     IDXGISwapChain IDXGISwapChain_iface;
     LONG refcount;
     struct wined3d_swapchain *wined3d_swapchain;
+    BOOL fullscreen;
+    BOOL fullscreen_pending;
+    int width;
+    int height;
+    HWND window;
 };
 
 HRESULT dxgi_swapchain_init(struct dxgi_swapchain *swapchain, struct dxgi_device *device,
