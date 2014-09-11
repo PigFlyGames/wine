@@ -22,6 +22,7 @@
 
 #include "dxgi_private.h"
 
+#include "winuser.h"
 WINE_DEFAULT_DEBUG_CHANNEL(dxgi);
 
 static inline struct dxgi_swapchain *impl_from_IDXGISwapChain(IDXGISwapChain *iface)
@@ -172,20 +173,71 @@ static HRESULT STDMETHODCALLTYPE dxgi_swapchain_GetBuffer(IDXGISwapChain *iface,
     return hr;
 }
 
+
+static HRESULT CDECL reset_enum_callback(struct wined3d_resource *resource)
+{
+    return 0;
+}
+
+
 static HRESULT STDMETHODCALLTYPE dxgi_swapchain_SetFullscreenState(IDXGISwapChain *iface,
         BOOL fullscreen, IDXGIOutput *target)
 {
     FIXME("iface %p, fullscreen %u, target %p stub!\n", iface, fullscreen, target);
 
-    return E_NOTIMPL;
+    struct dxgi_swapchain *swapchain = impl_from_IDXGISwapChain(iface);
+    struct wined3d_swapchain_desc wined3d_desc;
+    struct wined3d_device *device = wined3d_swapchain_get_device(swapchain->wined3d_swapchain);
+    struct wined3d_display_mode mode;
+    struct dxgi_device dxgi_device;
+
+
+    dxgi_device.wined3d_device = device;
+    wined3d_swapchain_get_desc(swapchain->wined3d_swapchain, &wined3d_desc);
+
+    if (fullscreen && swapchain->fullscreen == FALSE)
+    {
+        wined3d_device_get_display_mode(device, 0, &mode, NULL);
+
+        /* remember the window size */
+        if (wined3d_desc.backbuffer_width != swapchain->width ||
+            wined3d_desc.backbuffer_height != swapchain->height)
+        {
+            swapchain->width = wined3d_desc.backbuffer_width;
+            swapchain->height = wined3d_desc.backbuffer_height;
+            swapchain->window = wined3d_desc.device_window;
+        }
+
+        wined3d_desc.backbuffer_width = mode.width;
+        wined3d_desc.backbuffer_height = mode.height;
+        wined3d_device_reset(device, &wined3d_desc, &mode, reset_enum_callback, FALSE);
+        wined3d_device_setup_fullscreen_window(device, wined3d_desc.device_window, mode.width, mode.height);
+        dxgi_swapchain_init(swapchain, &dxgi_device, &wined3d_desc);
+
+        swapchain->fullscreen = TRUE;
+        swapchain->fullscreen_pending = TRUE;
+    }
+    else if (fullscreen == FALSE && swapchain->fullscreen == TRUE)
+    {
+        swapchain->fullscreen = FALSE;
+    }
+
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE dxgi_swapchain_GetFullscreenState(IDXGISwapChain *iface,
         BOOL *fullscreen, IDXGIOutput **target)
 {
     FIXME("iface %p, fullscreen %p, target %p stub!\n", iface, fullscreen, target);
+    struct dxgi_swapchain *swapchain = impl_from_IDXGISwapChain(iface);
+    struct wined3d_swapchain_desc wined3d_desc;
 
-    return E_NOTIMPL;
+    if (swapchain->fullscreen == TRUE)
+        *fullscreen = TRUE;
+    else
+        *fullscreen = FALSE;
+
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE dxgi_swapchain_GetDesc(IDXGISwapChain *iface, DXGI_SWAP_CHAIN_DESC *desc)
@@ -228,15 +280,56 @@ static HRESULT STDMETHODCALLTYPE dxgi_swapchain_ResizeBuffers(IDXGISwapChain *if
     FIXME("iface %p, buffer_count %u, width %u, height %u, format %s, flags %#x stub!\n",
             iface, buffer_count, width, height, debug_dxgi_format(format), flags);
 
-    return E_NOTIMPL;
+    struct dxgi_swapchain *swapchain = impl_from_IDXGISwapChain(iface);
+    struct wined3d_swapchain_desc wined3d_desc;
+    struct wined3d_device *device = wined3d_swapchain_get_device(swapchain->wined3d_swapchain);
+    struct wined3d_display_mode mode;
+    struct dxgi_device dxgi_device;
+
+    dxgi_device.wined3d_device = device;
+    wined3d_swapchain_get_desc(swapchain->wined3d_swapchain, &wined3d_desc);
+
+    wined3d_desc.backbuffer_width = width;
+    wined3d_desc.backbuffer_height = height;
+
+    dxgi_swapchain_init(swapchain, &dxgi_device, &wined3d_desc);
+
+    if (swapchain->fullscreen_pending == TRUE)
+    {
+        /* Don't mess with the window style if we're switching to fullscreen */
+        swapchain->fullscreen_pending = FALSE;
+        return S_OK;
+    }
+
+    if (flags == 0x2)
+    {
+        if (width == 0 && height == 0)
+        {
+            HWND window = wined3d_desc.device_window;
+
+            swapchain->fullscreen = FALSE;
+            RECT rect;
+
+            long style = GetWindowLongA(window, GWL_STYLE);
+            style = WS_OVERLAPPEDWINDOW;
+
+            SetWindowLongA(window, GWL_STYLE, style);
+            SetWindowPos(window, 0, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOACTIVATE );
+
+            return S_OK;
+        }
+    }
+
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE dxgi_swapchain_ResizeTarget(IDXGISwapChain *iface,
         const DXGI_MODE_DESC *target_mode_desc)
 {
+
     FIXME("iface %p, target_mode_desc %p stub!\n", iface, target_mode_desc);
 
-    return E_NOTIMPL;
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE dxgi_swapchain_GetContainingOutput(IDXGISwapChain *iface, IDXGIOutput **output)
