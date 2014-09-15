@@ -92,6 +92,7 @@ static const char * const shader_opcode_names[] =
     /* WINED3DSIH_IF                    */ "if",
     /* WINED3DSIH_IFC                   */ "ifc",
     /* WINED3DSIH_IGE                   */ "ige",
+    /* WINED3DSIH_ILT                   */ "ilt",
     /* WINED3DSIH_IMUL                  */ "imul",
     /* WINED3DSIH_ISHL                  */ "ishl",
     /* WINED3DSIH_ITOF                  */ "itof",
@@ -115,6 +116,7 @@ static const char * const shader_opcode_names[] =
     /* WINED3DSIH_MOVA                  */ "mova",
     /* WINED3DSIH_MOVC                  */ "movc",
     /* WINED3DSIH_MUL                   */ "mul",
+    /* WINED3DSIH_NE                    */ "ne",
     /* WINED3DSIH_NOP                   */ "nop",
     /* WINED3DSIH_NRM                   */ "nrm",
     /* WINED3DSIH_PHASE                 */ "phase",
@@ -1633,6 +1635,46 @@ static void shader_trace_init(const struct wined3d_shader_frontend *fe, void *fe
                     *(const float *)&ins.src[0].reg.immconst_data[1],
                     *(const float *)&ins.src[0].reg.immconst_data[2],
                     *(const float *)&ins.src[0].reg.immconst_data[3]);
+        }
+        else if (ins.handler_idx == WINED3DSIH_ILT)
+        {
+            TRACE("%s", shader_opcode_names[ins.handler_idx]);
+            int arguments = 0;
+
+            for (i = 0; i < ins.dst_count; ++i)
+            {
+                shader_dump_ins_modifiers(&ins.dst[i]);
+                TRACE(!i ? " " : ", ");
+                shader_dump_dst_param(&ins.dst[i], &shader_version);
+            }
+
+            /* Other source tokens */
+            for (i = ins.dst_count; i < (ins.dst_count + ins.src_count); ++i)
+            {
+                TRACE(!i ? " " : ", ");
+                shader_dump_src_param(&ins.src[i - ins.dst_count], &shader_version);
+            }
+
+        }
+        else if (ins.handler_idx == WINED3DSIH_NE)
+        {
+            TRACE("%s", shader_opcode_names[ins.handler_idx]);
+            int arguments = 0;
+
+            for (i = 0; i < ins.dst_count; ++i)
+            {
+                shader_dump_ins_modifiers(&ins.dst[i]);
+                TRACE(!i ? " " : ", ");
+                shader_dump_dst_param(&ins.dst[i], &shader_version);
+            }
+
+            /* Other source tokens */
+            for (i = ins.dst_count; i < (ins.dst_count + ins.src_count); ++i)
+            {
+                TRACE(!i ? " " : ", ");
+                shader_dump_src_param(&ins.src[i - ins.dst_count], &shader_version);
+            }
+
         }
         else if (ins.handler_idx == WINED3DSIH_DEFI)
         {

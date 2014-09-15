@@ -1768,7 +1768,33 @@ static void shader_glsl_add_src_param(const struct wined3d_shader_instruction *i
     shader_glsl_get_register_name(&wined3d_src->reg, glsl_src->reg_name, &is_color, ins);
     shader_glsl_get_swizzle(wined3d_src, is_color, mask, swizzle_str);
 
-    if (wined3d_src->reg.type == WINED3DSPR_IMMCONST || wined3d_src->reg.type == WINED3DSPR_PRIMID)
+    if (wined3d_src->reg.type == WINED3DSPR_IMMCONST)
+    {
+        char param_str[200];
+
+        shader_glsl_gen_modifier(wined3d_src->modifiers, glsl_src->reg_name, swizzle_str, param_str);
+
+        switch (wined3d_src->reg.data_type)
+        {
+            case WINED3D_DATA_FLOAT:
+                sprintf(glsl_src->param_str, "%s", param_str);
+                break;
+            case WINED3D_DATA_INT:
+                sprintf(glsl_src->param_str, "int(%s)", param_str);
+                break;
+            case WINED3D_DATA_RESOURCE:
+            case WINED3D_DATA_SAMPLER:
+            case WINED3D_DATA_UINT:
+                sprintf(glsl_src->param_str, "uint(%s)", param_str);
+                break;
+            default:
+                FIXME("Unhandled data type %#x.\n", wined3d_src->reg.data_type);
+                sprintf(glsl_src->param_str, "%s", param_str);
+                break;
+        }
+
+    }
+    else if(wined3d_src->reg.type == WINED3DSPR_PRIMID)
     {
         shader_glsl_gen_modifier(wined3d_src->modifiers, glsl_src->reg_name, swizzle_str, glsl_src->param_str);
     }
@@ -1784,7 +1810,8 @@ static void shader_glsl_add_src_param(const struct wined3d_shader_instruction *i
                 sprintf(glsl_src->param_str, "%s", param_str);
                 break;
             case WINED3D_DATA_INT:
-                sprintf(glsl_src->param_str, "floatBitsToInt(%s)", param_str);
+                /* TODO: figure out why +1-1 is needed */
+                sprintf(glsl_src->param_str, "(floatBitsToInt(%s)+1-1)", param_str);
                 break;
             case WINED3D_DATA_RESOURCE:
             case WINED3D_DATA_SAMPLER:
@@ -2365,9 +2392,11 @@ static void shader_glsl_relop(const struct wined3d_shader_instruction *ins)
         switch (ins->handler_idx)
         {
             case WINED3DSIH_EQ:  op = "equal"; break;
+            case WINED3DSIH_IEQ:  op = "equal"; break;
             case WINED3DSIH_GE:  op = "greaterThanEqual"; break;
             case WINED3DSIH_IGE: op = "greaterThanEqual"; break;
             case WINED3DSIH_LT:  op = "lessThan"; break;
+            case WINED3DSIH_ILT:  op = "lessThan"; break;
             default:
                 op = "<unhandled operator>";
                 ERR("Unhandled opcode %#x.\n", ins->handler_idx);
@@ -2382,9 +2411,12 @@ static void shader_glsl_relop(const struct wined3d_shader_instruction *ins)
         switch (ins->handler_idx)
         {
             case WINED3DSIH_EQ:  op = "=="; break;
+            case WINED3DSIH_IEQ:  op = "=="; break;
+            case WINED3DSIH_NE:  op = "!="; break;
             case WINED3DSIH_GE:  op = ">="; break;
             case WINED3DSIH_IGE: op = ">="; break;
             case WINED3DSIH_LT:  op = "<"; break;
+            case WINED3DSIH_ILT:  op = "<"; break;
             default:
                 op = "<unhandled operator>";
                 ERR("Unhandled opcode %#x.\n", ins->handler_idx);
@@ -2862,8 +2894,8 @@ static void shader_glsl_conditional_move(const struct wined3d_shader_instruction
             break;
 
         case WINED3DSIH_MOVC:
-            condition_prefix = "bool(";
-            condition_suffix = ")";
+            condition_prefix = "(";
+            condition_suffix = ") != 0";
             break;
 
         default:
@@ -2880,9 +2912,19 @@ static void shader_glsl_conditional_move(const struct wined3d_shader_instruction
         shader_glsl_add_src_param(ins, &ins->src[1], write_mask, &src1_param);
         shader_glsl_add_src_param(ins, &ins->src[2], write_mask, &src2_param);
 
-        shader_addline(ins->ctx->buffer, "%s%s%s ? %s : %s);\n",
+        if(strncmp(src0_param.param_str, "floatBitsToUint" ,15) == 0  &&
+           strcmp(condition_suffix, ") != 0")  == 0)
+        {
+            shader_addline(ins->ctx->buffer, "%s%s%su ? %s : %s);\n",
                 condition_prefix, src0_param.param_str, condition_suffix,
                 src1_param.param_str, src2_param.param_str);
+        }
+        else
+        {
+            shader_addline(ins->ctx->buffer, "%s%s%s ? %s : %s);\n",
+                condition_prefix, src0_param.param_str, condition_suffix,
+                src1_param.param_str, src2_param.param_str);
+        }
         return;
     }
 
@@ -2927,9 +2969,19 @@ static void shader_glsl_conditional_move(const struct wined3d_shader_instruction
         shader_glsl_add_src_param(ins, &ins->src[1], write_mask, &src1_param);
         shader_glsl_add_src_param(ins, &ins->src[2], write_mask, &src2_param);
 
-        shader_addline(ins->ctx->buffer, "%s%s%s ? %s : %s);\n",
+        if(strncmp(src0_param.param_str, "floatBitsToUint" ,15) == 0  &&
+           strcmp(condition_suffix, ") != 0")  == 0)
+        {
+            shader_addline(ins->ctx->buffer, "%s%s%su ? %s : %s);\n",
                 condition_prefix, src0_param.param_str, condition_suffix,
                 src1_param.param_str, src2_param.param_str);
+        }
+        else
+        {
+            shader_addline(ins->ctx->buffer, "%s%s%s ? %s : %s);\n",
+                condition_prefix, src0_param.param_str, condition_suffix,
+                src1_param.param_str, src2_param.param_str);
+        }
     }
 
     if (temp_destination)
@@ -3431,7 +3483,21 @@ static void shader_glsl_breakp(const struct wined3d_shader_instruction *ins)
     struct glsl_src_param src_param;
 
     shader_glsl_add_src_param(ins, &ins->src[0], WINED3DSP_WRITEMASK_0, &src_param);
-    shader_addline(ins->ctx->buffer, "if (bool(%s)) break;\n", src_param.param_str);
+
+    if (strncmp(src_param.param_str, "floatBitsToUint", 15) == 0)
+    {
+        shader_addline(ins->ctx->buffer, "if  (%s != 0u) break;\n", src_param.param_str);
+
+    }
+    else if (strncmp(src_param.param_str, "floatBitsToInt", 14) == 0)
+    {
+        shader_addline(ins->ctx->buffer, "if  (%s != 0) {\n", src_param.param_str);
+
+    }
+    else
+    {
+        shader_addline(ins->ctx->buffer, "if (%s) break;\n", src_param.param_str);
+    }
 }
 
 static void shader_glsl_label(const struct wined3d_shader_instruction *ins)
@@ -4674,6 +4740,10 @@ static GLhandleARB shader_glsl_generate_geometry_shader(const struct wined3d_con
         shader_addline(buffer, "#extension GL_ARB_uniform_buffer_object : enable\n");
     if (gl_info->supported[EXT_GPU_SHADER4])
         shader_addline(buffer, "#extension GL_EXT_gpu_shader4 : enable\n");
+
+    /* use high precision floats and ints...maybe we need to check for support? */
+    shader_addline(buffer, "precision highp float;\n");
+    shader_addline(buffer, "precision highp int;\n");
 
     memset(&priv_ctx, 0, sizeof(priv_ctx));
     shader_generate_glsl_declarations(context, buffer, shader, reg_maps, &priv_ctx);
@@ -6779,10 +6849,11 @@ static const SHADER_HANDLER shader_glsl_instruction_handler_table[WINED3DSIH_TAB
     /* WINED3DSIH_FTOI                  */ shader_glsl_to_int,
     /* WINED3DSIH_GE                    */ shader_glsl_relop,
     /* WINED3DSIH_IADD                  */ shader_glsl_binop,
-    /* WINED3DSIH_IEQ                   */ NULL,
+    /* WINED3DSIH_IEQ                   */ shader_glsl_relop,
     /* WINED3DSIH_IF                    */ shader_glsl_if,
     /* WINED3DSIH_IFC                   */ shader_glsl_ifc,
     /* WINED3DSIH_IGE                   */ shader_glsl_relop,
+    /* WINED3DSIH_ILT                   */ shader_glsl_relop,
     /* WINED3DSIH_IMUL                  */ shader_glsl_imul,
     /* WINED3DSIH_ISHL                  */ shader_glsl_binop,
     /* WINED3DSIH_ITOF                  */ shader_glsl_to_float,
@@ -6806,6 +6877,7 @@ static const SHADER_HANDLER shader_glsl_instruction_handler_table[WINED3DSIH_TAB
     /* WINED3DSIH_MOVA                  */ shader_glsl_mov,
     /* WINED3DSIH_MOVC                  */ shader_glsl_conditional_move,
     /* WINED3DSIH_MUL                   */ shader_glsl_binop,
+    /* WINED3DSIH_NE                    */ shader_glsl_relop,
     /* WINED3DSIH_NOP                   */ shader_glsl_nop,
     /* WINED3DSIH_NRM                   */ shader_glsl_nrm,
     /* WINED3DSIH_PHASE                 */ shader_glsl_nop,
