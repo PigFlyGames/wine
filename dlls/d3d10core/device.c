@@ -494,12 +494,30 @@ static void STDMETHODCALLTYPE d3d10_device_OMSetBlendState(ID3D10Device1 *iface,
 {
     struct d3d10_device *device = impl_from_ID3D10Device(iface);
     D3D10_BLEND_DESC *desc;
+    float blend_factor_local[4];
+
+    if (blend_factor == NULL)
+    {
+        blend_factor_local[0] = 1;
+        blend_factor_local[1] = 1;
+        blend_factor_local[2] = 1;
+        blend_factor_local[3] = 1;
+    }
+    else
+    {
+        blend_factor_local[0] = blend_factor[0];
+        blend_factor_local[1] = blend_factor[1];
+        blend_factor_local[2] = blend_factor[2];
+        blend_factor_local[3] = blend_factor[3];
+
+    }
 
     TRACE("iface %p, blend_state %p, blend_factor [%f %f %f %f], sample_mask 0x%08x.\n",
-            iface, blend_state, blend_factor[0], blend_factor[1], blend_factor[2], blend_factor[3], sample_mask);
+            iface, blend_state, blend_factor_local[0], blend_factor_local[1], blend_factor_local[2],
+            blend_factor_local[3], sample_mask);
 
     device->blend_state = unsafe_impl_from_ID3D10BlendState(blend_state);
-    memcpy(device->blend_factor, blend_factor, 4 * sizeof(*blend_factor));
+    memcpy(device->blend_factor, blend_factor_local, 4 * sizeof(*blend_factor_local));
     device->sample_mask = sample_mask;
 
     desc = &device->blend_state->desc;
