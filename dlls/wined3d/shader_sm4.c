@@ -113,6 +113,7 @@ enum wined3d_sm4_opcode
     WINED3D_SM4_OP_MAD                  = 0x32,
     WINED3D_SM4_OP_MIN                  = 0x33,
     WINED3D_SM4_OP_MAX                  = 0x34,
+    WINED3D_SM4_OP_CUSTOMDATA           = 0x35,
     WINED3D_SM4_OP_MOV                  = 0x36,
     WINED3D_SM4_OP_MOVC                 = 0x37,
     WINED3D_SM4_OP_MUL                  = 0x38,
@@ -259,6 +260,7 @@ static const struct wined3d_sm4_opcode_info opcode_table[] =
     {WINED3D_SM4_OP_MAD,                    WINED3DSIH_MAD,                 "F",    "FFF"},
     {WINED3D_SM4_OP_MIN,                    WINED3DSIH_MIN,                 "F",    "FF"},
     {WINED3D_SM4_OP_MAX,                    WINED3DSIH_MAX,                 "F",    "FF"},
+    {WINED3D_SM4_OP_CUSTOMDATA,             WINED3DSIH_CUSTOMDATA,          "F",    "FF"},
     {WINED3D_SM4_OP_MOV,                    WINED3DSIH_MOV,                 "F",    "F"},
     {WINED3D_SM4_OP_MOVC,                   WINED3DSIH_MOVC,                "F",    "UFF"},
     {WINED3D_SM4_OP_MUL,                    WINED3DSIH_MUL,                 "F",    "FF"},
@@ -736,14 +738,18 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
     opcode = opcode_token & WINED3D_SM4_OPCODE_MASK;
     len = ((opcode_token & WINED3D_SM4_INSTRUCTION_LENGTH_MASK) >> WINED3D_SM4_INSTRUCTION_LENGTH_SHIFT) - 1;
 
-    if (TRACE_ON(d3d_bytecode))
+    if (opcode != WINED3D_SM4_OP_CUSTOMDATA)
     {
-        TRACE_(d3d_bytecode)("[ %08x ", opcode_token);
-        for (i = 0; i < len; ++i)
+
+        if (TRACE_ON(d3d_bytecode))
         {
-            TRACE_(d3d_bytecode)("%08x ", (*ptr)[i]);
+            TRACE_(d3d_bytecode)("[ %08x ", opcode_token);
+            for (i = 0; i < len; ++i)
+            {
+                TRACE_(d3d_bytecode)("%08x ", (*ptr)[i]);
+            }
+            TRACE_(d3d_bytecode)("]\n");
         }
-        TRACE_(d3d_bytecode)("]\n");
     }
 
     if (!(opcode_info = get_opcode_info(opcode)))
@@ -763,6 +769,25 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
     ins->src_count = strlen(opcode_info->src_info);
     ins->src = priv->src_param;
 
+    if (opcode == WINED3D_SM4_OP_CUSTOMDATA)
+    {
+        unsigned int length;
+        TRACE("Detected Customdata opcode. [");
+        TRACE("%08x ", opcode_token);
+        TRACE("]\n");
+
+        unsigned char *byteData = (unsigned char *) &length;
+
+        byteData[0] = ((unsigned char *)(*ptr))[0];
+        byteData[1] = ((unsigned char *)(*ptr))[1];
+        byteData[2] = ((unsigned char *)(*ptr))[2];
+        byteData[3] = ((unsigned char *)(*ptr))[3];
+
+        TRACE("Custom Data Length: %d\n", length);
+        len = (length-1);
+    }
+
+
     p = *ptr;
     *ptr += len;
 
@@ -771,6 +796,7 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
         DWORD modifier = *p++;
         FIXME("Skipping modifier 0x%08x.\n", modifier);
     }
+
 
     if (opcode == WINED3D_SM4_OP_DCL_RESOURCE)
     {
@@ -915,6 +941,9 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
     {
         int numTempRegisters = opcode_token >> WINED3D_SM4_TEMPS_SHIFT;
         ins->numTempRegisters = numTempRegisters;
+    }
+    else if (opcode == WINED3D_SM4_OP_CUSTOMDATA)
+    {
     }
     else
     {

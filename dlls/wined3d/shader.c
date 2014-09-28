@@ -52,6 +52,7 @@ static const char * const shader_opcode_names[] =
     /* WINED3DSIH_CMP                   */ "cmp",
     /* WINED3DSIH_CND                   */ "cnd",
     /* WINED3DSIH_CRS                   */ "crs",
+    /* WINED3DSIH_CUSTOMDATA            */ "customdata",
     /* WINED3DSIH_CUT                   */ "cut",
     /* WINED3DSIH_DCL                   */ "dcl",
     /* WINED3DSIH_DCL_RESOURCE          */ "dcl_resource",
@@ -669,6 +670,10 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, const st
         else if (ins.handler_idx == WINED3DSIH_DCL_TEMPS)
         {
             reg_maps->temporary++;
+        }
+        else if (ins.handler_idx == WINED3DSIH_CUSTOMDATA)
+        {
+            /* TODO: do something with the custom data */
         }
         else if (ins.handler_idx == WINED3DSIH_DEF)
         {
@@ -1528,6 +1533,10 @@ static void shader_trace_init(const struct wined3d_shader_frontend *fe, void *fe
         else if (ins.handler_idx == WINED3DSIH_DCL_VERTICES_OUT)
         {
             TRACE("%s %u", shader_opcode_names[ins.handler_idx], ins.declaration.count);
+        }
+        else if (ins.handler_idx == WINED3DSIH_CUSTOMDATA)
+        {
+            TRACE("%s", shader_opcode_names[ins.handler_idx]);
         }
         else if (ins.handler_idx == WINED3DSIH_DCL_INPUT)
         {

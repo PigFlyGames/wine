@@ -6813,6 +6813,7 @@ static const SHADER_HANDLER shader_glsl_instruction_handler_table[WINED3DSIH_TAB
     /* WINED3DSIH_CMP                   */ shader_glsl_conditional_move,
     /* WINED3DSIH_CND                   */ shader_glsl_cnd,
     /* WINED3DSIH_CRS                   */ shader_glsl_cross,
+    /* WINED3DSIH_CUSTOMDATA            */ shader_glsl_nop,
     /* WINED3DSIH_CUT                   */ shader_glsl_cut,
     /* WINED3DSIH_DCL                   */ shader_glsl_nop,
     /* WINED3DSIH_DCL_RESOURCE          */ NULL,
