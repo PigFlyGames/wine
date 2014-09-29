@@ -512,6 +512,34 @@ static void STDMETHODCALLTYPE d3d10_device_OMSetBlendState(ID3D10Device1 *iface,
 
     }
 
+    if (blend_state == NULL)
+    {
+
+        TRACE("iface %p, Default Blend State, blend_factor [%f %f %f %f], sample_mask 0x%08x.\n",
+            iface, blend_state, blend_factor_local[0], blend_factor_local[1], blend_factor_local[2],
+            blend_factor_local[3], sample_mask);
+
+
+        wined3d_mutex_lock();
+        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_ALPHABLENDENABLE, FALSE);
+        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_SRCBLEND, D3D10_BLEND_ONE);
+        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_DESTBLEND, D3D10_BLEND_ZERO);
+        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_BLENDOP, D3D10_BLEND_OP_ADD);
+        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_SRCBLENDALPHA, D3D10_BLEND_ONE);
+        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_DESTBLENDALPHA, D3D10_BLEND_ZERO);
+        wined3d_device_set_render_state(device->wined3d_device, WINED3D_RS_BLENDOPALPHA, D3D10_BLEND_OP_ADD);
+        /* TODO: Need to use AlphaToCoverageEnable and RenderTargetWriteMask[] and BlendEnable[1-7] */
+
+        wined3d_mutex_unlock();
+
+
+        device->blend_state = unsafe_impl_from_ID3D10BlendState(blend_state);
+        memcpy(device->blend_factor, blend_factor_local, 4 * sizeof(*blend_factor_local));
+        device->sample_mask = sample_mask;
+        return;
+
+    }
+
     TRACE("iface %p, blend_state %p, blend_factor [%f %f %f %f], sample_mask 0x%08x.\n",
             iface, blend_state, blend_factor_local[0], blend_factor_local[1], blend_factor_local[2],
             blend_factor_local[3], sample_mask);
