@@ -128,6 +128,7 @@ enum wined3d_sm4_opcode
     WINED3D_SM4_OP_SQRT                 = 0x4b,
     WINED3D_SM4_OP_SINCOS               = 0x4d,
     WINED3D_SM4_OP_UDIV                 = 0x4e,
+    WINED3D_SM4_OP_ULT                  = 0x4f,
     WINED3D_SM4_OP_USHR                 = 0x55,
     WINED3D_SM4_OP_UTOF                 = 0x56,
     WINED3D_SM4_OP_XOR                  = 0x57,
@@ -276,6 +277,7 @@ static const struct wined3d_sm4_opcode_info opcode_table[] =
     {WINED3D_SM4_OP_SQRT,                   WINED3DSIH_SQRT,                "F",    "F"},
     {WINED3D_SM4_OP_SINCOS,                 WINED3DSIH_SINCOS,              "FF",   "F"},
     {WINED3D_SM4_OP_UDIV,                   WINED3DSIH_UDIV,                "UU",   "UU"},
+    {WINED3D_SM4_OP_ULT,                    WINED3DSIH_ULT,                 "U",    "UU"},
     {WINED3D_SM4_OP_USHR,                   WINED3DSIH_USHR,                "U",    "UU"},
     {WINED3D_SM4_OP_UTOF,                   WINED3DSIH_UTOF,                "F",    "U"},
     {WINED3D_SM4_OP_XOR,                    WINED3DSIH_XOR,                 "U",    "UU"},
@@ -861,6 +863,19 @@ static void shader_sm4_read_instruction(void *data, const DWORD **ptr, struct wi
         }
     }
     else if (opcode == WINED3D_SM4_OP_ILT)
+    {
+        for (i = 0; i < ins->dst_count; ++i)
+        {
+            shader_sm4_read_dst_param(priv, &p, map_data_type(opcode_info->dst_info[i]), &priv->dst_param[i]);
+        }
+
+        for (i = 0; i < ins->src_count; ++i)
+        {
+            shader_sm4_read_src_param(priv, &p, map_data_type(opcode_info->src_info[i]), &priv->src_param[i]);
+        }
+
+    }
+    else if (opcode == WINED3D_SM4_OP_ULT)
     {
         for (i = 0; i < ins->dst_count; ++i)
         {

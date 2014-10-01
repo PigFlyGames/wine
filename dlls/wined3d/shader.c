@@ -160,6 +160,7 @@ static const char * const shader_opcode_names[] =
     /* WINED3DSIH_TEXREG2GB             */ "texreg2gb",
     /* WINED3DSIH_TEXREG2RGB            */ "texreg2rgb",
     /* WINED3DSIH_UDIV                  */ "udiv",
+    /* WINED3DSIH_ULT                   */ "ult",
     /* WINED3DSIH_USHR                  */ "ushr",
     /* WINED3DSIH_UTOF                  */ "utof",
     /* WINED3DSIH_XOR                   */ "xor",
@@ -1653,6 +1654,26 @@ static void shader_trace_init(const struct wined3d_shader_frontend *fe, void *fe
                     *(const float *)&ins.src[0].reg.immconst_data[3]);
         }
         else if (ins.handler_idx == WINED3DSIH_ILT)
+        {
+            TRACE("%s", shader_opcode_names[ins.handler_idx]);
+            int arguments = 0;
+
+            for (i = 0; i < ins.dst_count; ++i)
+            {
+                shader_dump_ins_modifiers(&ins.dst[i]);
+                TRACE(!i ? " " : ", ");
+                shader_dump_dst_param(&ins.dst[i], &shader_version);
+            }
+
+            /* Other source tokens */
+            for (i = ins.dst_count; i < (ins.dst_count + ins.src_count); ++i)
+            {
+                TRACE(!i ? " " : ", ");
+                shader_dump_src_param(&ins.src[i - ins.dst_count], &shader_version);
+            }
+
+        }
+        else if (ins.handler_idx == WINED3DSIH_ULT)
         {
             TRACE("%s", shader_opcode_names[ins.handler_idx]);
             int arguments = 0;
