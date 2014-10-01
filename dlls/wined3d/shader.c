@@ -671,6 +671,9 @@ static HRESULT shader_get_registers_used(struct wined3d_shader *shader, const st
         {
             reg_maps->temporary++;
         }
+        else if (ins.handler_idx == WINED3DSIH_ELSE)
+        {
+        }
         else if (ins.handler_idx == WINED3DSIH_CUSTOMDATA)
         {
             /* TODO: do something with the custom data */
@@ -1535,6 +1538,10 @@ static void shader_trace_init(const struct wined3d_shader_frontend *fe, void *fe
             TRACE("%s %u", shader_opcode_names[ins.handler_idx], ins.declaration.count);
         }
         else if (ins.handler_idx == WINED3DSIH_CUSTOMDATA)
+        {
+            TRACE("%s", shader_opcode_names[ins.handler_idx]);
+        }
+        else if (ins.handler_idx == WINED3DSIH_ELSE)
         {
             TRACE("%s", shader_opcode_names[ins.handler_idx]);
         }
